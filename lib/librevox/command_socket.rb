@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'socket'
 require 'librevox/response'
 require 'librevox/commands'
@@ -29,7 +31,7 @@ module Librevox
     def read_response
       response = Librevox::Response.new
       until response.command_reply? or response.api_response?
-        response.headers = read_headers 
+        response.headers = read_headers
       end
 
       length = response.headers[:content_length].to_i
@@ -39,7 +41,7 @@ module Librevox
     end
 
     def read_headers
-      headers = ""
+      headers = String.new
 
       while line = @socket.gets and !line.chomp.empty?
         headers += line

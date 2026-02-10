@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Librevox
   # All applications should call `application` with the following parameters:
   #

@@ -1,6 +1,8 @@
-desc "Run tests"
-task :default => :test
+require 'rake/testtask'
 
-task :test do
-  sh "bacon -Ilib -a -q"
+Rake::TestTask.new do |t|
+  t.libs << "lib"
+  t.test_files = FileList['test/**/*_test.rb']
 end
+
+task :default => :test

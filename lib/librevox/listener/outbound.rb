@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'librevox/listener/base'
 require 'librevox/applications'
 
@@ -7,12 +9,10 @@ module Librevox
       include Librevox::Applications
 
       def application app, args=nil, params={}, &block
-        msg = "sendmsg\n"
-        msg << "call-command: execute\n"
-        msg << "execute-app-name: #{app}\n"
-        msg << "execute-app-arg: #{args}\n" if args && !args.empty?
+        parts = ["sendmsg", "call-command: execute", "execute-app-name: #{app}"]
+        parts << "execute-app-arg: #{args}" if args && !args.empty?
 
-        send_data "#{msg}\n"
+        send_data parts.join("\n") + "\n\n"
 
         @application_queue.push(proc {
           update_session do

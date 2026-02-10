@@ -1,13 +1,8 @@
-require 'eventmachine'
-require 'em/protocols/header_and_content'
-
-class String
-  alias :each :each_line
-end
+# frozen_string_literal: true
 
 module Librevox
   class Response
-    attr_accessor :headers, :content
+    attr_reader :headers, :content
 
     def initialize headers="", content=""
       self.headers = headers
@@ -16,7 +11,7 @@ module Librevox
 
     def headers= headers
       @headers = headers_2_hash(headers)
-      @headers.each {|k,v| v.chomp! if v.is_a?(String)}
+      @headers.transform_values! {|v| v.is_a?(String) ? v.chomp : v}
     end
 
     def content= content
@@ -25,7 +20,7 @@ module Librevox
                  else
                    content
                  end
-      @content.each {|k,v| v.chomp! if v.is_a?(String)}
+      @content.transform_values! {|v| v.is_a?(String) ? v.chomp : v} if @content.is_a?(Hash)
     end
 
     def event?
@@ -45,8 +40,15 @@ module Librevox
     end
 
     private
-    def headers_2_hash *args
-      EM::Protocols::HeaderAndContentProtocol.headers_2_hash *args
+    def headers_2_hash header_string
+      return header_string if header_string.is_a?(Hash)
+      hash = {}
+      header_string.each_line do |line|
+        if line =~ /\A([^\s:]+)\s*:\s*(.*?)\s*\z/
+          hash[$1.downcase.tr('-', '_').to_sym] = $2
+        end
+      end
+      hash
     end
   end
 end

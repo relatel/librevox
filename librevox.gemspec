@@ -1,37 +1,23 @@
+require_relative "lib/librevox/version"
+
 Gem::Specification.new do |s|
   s.name     = "librevox"
-  s.version  = "0.9"
-  s.date     = "2014-04-03"
+  s.version  = Librevox::VERSION
   s.summary  = "Ruby library for interacting with FreeSWITCH."
-  s.email    = "harry@vangberg.name"
-  s.homepage = "http://github.com/vangberg/librevox"
-  s.description = "EventMachine-based Ruby library for interacting with the
-open source telephony platform FreeSwitch."
-  s.authors  = ["Harry Vangberg"]
-  s.files    = [
-    "README.md",
-    "LICENSE",
-    "TODO",
-    "Rakefile",
-		"librevox.gemspec",
-		"lib/librevox.rb",
-    "lib/librevox/applications.rb",
-    "lib/librevox/command_socket.rb",
-    "lib/librevox/commands.rb",
-    "lib/librevox/response.rb",
-    "lib/librevox/listener/base.rb",
-    "lib/librevox/listener/inbound.rb",
-    "lib/librevox/listener/outbound.rb"
-  ]
-  s.test_files  = [
-    "spec/helper.rb",
-    "spec/librevox/listener.rb",
-    "spec/librevox/spec_applications.rb",
-    #"spec/librevox/spec_command_socket.rb",
-    "spec/librevox/spec_commands.rb",
-    "spec/librevox/spec_response.rb",
-    "spec/librevox/listener/spec_inbound.rb",
-    "spec/librevox/listener/spec_outbound.rb"
-  ]
-  s.add_dependency "eventmachine", "~> 1.0"
+  s.email    = "teknik@relatel.dk"
+  s.homepage = "http://github.com/relatel/librevox"
+  s.description = "Async-based Ruby library for interacting with the open source telephony platform FreeSWITCH."
+  s.authors  = ["Harry Vangberg", "Henrik Hauge Bjørnskov", "Relatel A/S"]
+
+  s.required_ruby_version = ">= 3.0"
+
+  s.metadata["allowed_push_host"] = "https://rubygems.org"
+  s.metadata["homepage_uri"] = s.homepage
+  s.metadata["source_code_uri"] = s.homepage
+
+  s.files = Dir.glob("lib/librevox/**/*") + %w[lib/librevox.rb README.md LICENSE]
+  s.require_paths = ["lib"]
+
+  s.add_dependency "async", "~> 2.0"
+  s.add_dependency "async-io", "~> 1.0"
 end

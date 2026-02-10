@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'librevox/listener/base'
 
 module Librevox
@@ -17,12 +19,9 @@ module Librevox
       end
 
       def initialize args={}
-        super
-
+        super()
         @auth = args[:auth] || "ClueCon"
         @host, @port = args.values_at(:host, :port)
-
-        EventMachine.add_shutdown_hook {@shutdown = true}
       end
 
       def connection_completed
@@ -43,9 +42,8 @@ module Librevox
       end
 
       def unbind
-        if !@shutdown
+        unless @shutdown
           Librevox.logger.error "Lost connection. Reconnecting in 1 second."
-          EM.add_timer(1) {reconnect(@host, @port.to_i)}
         end
       end
     end

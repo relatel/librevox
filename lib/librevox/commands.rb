@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Librevox
   # All commands should call `command` with the following parameters:
   #
@@ -11,9 +13,9 @@ module Librevox
     #   socket.command "fsctl", "hupall normal_clearing"
     # @see http://wiki.freeswitch.org/wiki/Mod_commands
     def command name, args=""
-      msg = "api #{name}"
-      msg << " #{args}" if args && !args.empty?
-      msg
+      parts = ["api", name]
+      parts << args if args && !args.empty?
+      parts.join(" ")
     end
 
     def status &block

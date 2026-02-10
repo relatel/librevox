@@ -1,10 +1,20 @@
-require 'eventmachine'
+# frozen_string_literal: true
+
 require 'librevox/response'
 require 'librevox/commands'
 
 module Librevox
   module Listener
-    class Base < EventMachine::Protocols::HeaderAndContentProtocol
+    class Base
+      # Mimics EM::Connection behavior: separates signature from args,
+      # calls post_init after initialize completes.
+      def self.new(sig = nil, *args)
+        instance = allocate
+        instance.send(:initialize, *args)
+        instance.post_init
+        instance
+      end
+
       class << self
         def hooks
           @hooks ||= Hash.new {|hash, key| hash[key] = []}
@@ -54,6 +64,12 @@ module Librevox
         @command_queue = []
       end
 
+      def receive_data data
+        @buf ||= String.new
+        @buf << data
+        process_buffer
+      end
+
       def receive_request header, content
         @response = Librevox::Response.new(header, content)
         handle_response
@@ -74,9 +90,48 @@ module Librevox
       def on_event event
       end
 
+      def send_data data
+      end
+
+      def connection_completed
+      end
+
+      def close_connection_after_writing
+      end
+
       alias :done :close_connection_after_writing
 
       private
+
+      def process_buffer
+        loop do
+          if @content_length
+            break if @buf.length < @content_length
+            content = @buf.slice!(0, @content_length)
+            @content_length = nil
+            receive_request(@header_buffer, content)
+          else
+            idx = @buf.index("\n\n")
+            break unless idx
+
+            @header_buffer = @buf.slice!(0, idx)
+            @buf.slice!(0, 2) # remove \n\n
+
+            next if @header_buffer.empty?
+
+            if @header_buffer =~ /Content-Length:\s*(\d+)/i
+              @content_length = $1.to_i
+              if @content_length == 0
+                @content_length = nil
+                receive_request(@header_buffer, "")
+              end
+            else
+              receive_request(@header_buffer, "")
+            end
+          end
+        end
+      end
+
       def invoke_event_hooks
         event = response.event.downcase.to_sym
         self.class.hooks[event].each {|block|
