@@ -9,7 +9,7 @@ module Librevox
   class CommandSocket
     include Librevox::Commands
 
-    def initialize args={}
+    def initialize(args = {})
       @server   = args[:server] || "127.0.0.1"
       @port     = args[:port] || "8021"
       @auth     = args[:auth] || "ClueCon"
@@ -23,7 +23,7 @@ module Librevox
       read_response
     end
 
-    def command *args
+    def command(*args)
       @socket.print "#{super(*args)}\n\n"
       read_response
     end

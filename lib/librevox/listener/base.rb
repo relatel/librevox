@@ -6,11 +6,10 @@ require 'librevox/commands'
 module Librevox
   module Listener
     class Base
-      # Mimics EM::Connection behavior: separates signature from args,
-      # calls post_init after initialize completes.
-      def self.new(sig = nil, *args)
+      def self.new(connection = nil, *args)
         instance = allocate
         instance.send(:initialize, *args)
+        instance.connection = connection
         instance.post_init
         instance
       end
@@ -20,7 +19,7 @@ module Librevox
           @hooks ||= Hash.new {|hash, key| hash[key] = []}
         end
 
-        def event event, &block
+        def event(event, &block)
           hooks[event] << block
         end
       end
@@ -32,12 +31,12 @@ module Librevox
       class CommandDelegate
         include Librevox::Commands
 
-        def initialize listener
+        def initialize(listener)
           @listener = listener
         end
 
-        def command *args, &block
-          @listener.command super(*args), &block
+        def command(*args, &block)
+          @listener.command(super(*args), &block)
         end
       end
 
@@ -51,26 +50,27 @@ module Librevox
         @command_delegate ||= CommandDelegate.new(self)
       end
 
-      def command msg, &block
+      def command(msg, &block)
         send_data "#{msg}\n\n"
 
         @command_queue.push(block)
       end
 
       attr_accessor :response
+      attr_writer :connection
       alias :event :response
 
       def post_init
         @command_queue = []
       end
 
-      def receive_data data
+      def receive_data(data)
         @buf ||= String.new
         @buf << data
         process_buffer
       end
 
-      def receive_request header, content
+      def receive_request(header, content)
         @response = Librevox::Response.new(header, content)
         handle_response
       end
@@ -87,16 +87,24 @@ module Librevox
       end
 
       # override
-      def on_event event
+      def on_event(event)
       end
 
-      def send_data data
+      def send_data(data)
+        @connection&.write(data)
+      end
+
+      def read_loop
+        while data = @connection.read_partial(4096)
+          receive_data(data)
+        end
       end
 
       def connection_completed
       end
 
       def close_connection_after_writing
+        @connection&.close
       end
 
       alias :done :close_connection_after_writing

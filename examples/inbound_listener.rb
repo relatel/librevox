@@ -1,17 +1,18 @@
+# frozen_string_literal: true
+
 require 'librevox'
- 
+
 class MyInbound < Librevox::Listener::Inbound
   # `on_event` is called every time an event is received.
-  def on_event e
+  def on_event(e)
     # Be sure to check out the content of `e`. It has all the good stuff.
   end
- 
+
   # You can add a hook for a certain event:
-  event :channel_hangup do
-    # It is instance_eval'ed, so you can use your instance methods etc:
+  event(:channel_hangup) do
     do_something
   end
- 
+
   def do_something
     # ...
   end

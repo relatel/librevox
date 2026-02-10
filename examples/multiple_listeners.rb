@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'librevox'
 
 class SomeInbound < Librevox::Listener::Inbound
-  def on_event e
+  def on_event(e)
     # ...
   end
 end

@@ -3,20 +3,30 @@
 require_relative '../test_helper'
 require 'librevox/listener/base'
 
-module ListenerTestMock
-  attr_accessor :outgoing_data, :on_event_block
+class MockConnection
+  attr_reader :data
 
-  def initialize(*args)
-    @outgoing_data = []
-    super(*args)
+  def initialize
+    @data = []
   end
 
-  def send_data(data)
-    @outgoing_data << data
+  def write(data)
+    @data << data
+  end
+
+  def close
+  end
+end
+
+module ListenerTestMock
+  attr_accessor :on_event_block
+
+  def outgoing_data
+    @connection.data
   end
 
   def read_data
-    @outgoing_data.pop
+    @connection.data.pop
   end
 
   def on_event(e)
@@ -29,6 +39,16 @@ Librevox::Listener::Base.prepend(ListenerTestMock)
 module Librevox::Commands
   def sample_cmd(cmd, *args, &block)
     command cmd, *args, &block
+  end
+end
+
+module Librevox::Applications
+  def sample_app(name, *args, &block)
+    application name, args.join(" "), &block
+  end
+
+  def reader_app(&block)
+    application 'reader_app', "", {:variable => 'app_var'}, &block
   end
 end
 
@@ -142,5 +162,14 @@ module ApiCommandTests
 
     api_response :body => "+YAY"
     assert_send_command @listener, "response +YAY"
+  end
+end
+
+module OutboundSetupHelpers
+  include Librevox::Test::ListenerHelpers
+
+  def event_and_linger_replies
+    command_reply "Reply-Text" => "+OK Events Enabled"
+    command_reply "Reply-Text" => "+OK will linger"
   end
 end

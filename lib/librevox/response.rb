@@ -4,17 +4,17 @@ module Librevox
   class Response
     attr_reader :headers, :content
 
-    def initialize headers="", content=""
+    def initialize(headers = "", content = "")
       self.headers = headers
       self.content = content
     end
 
-    def headers= headers
+    def headers=(headers)
       @headers = headers_2_hash(headers)
       @headers.transform_values! {|v| v.is_a?(String) ? v.chomp : v}
     end
 
-    def content= content
+    def content=(content)
       @content = if content.respond_to?(:match) && content.match(/:/)
                    headers_2_hash(content).merge(:body => content.split("\n\n", 2)[1].to_s)
                  else
@@ -40,7 +40,8 @@ module Librevox
     end
 
     private
-    def headers_2_hash header_string
+
+    def headers_2_hash(header_string)
       return header_string if header_string.is_a?(Hash)
       hash = {}
       header_string.each_line do |line|

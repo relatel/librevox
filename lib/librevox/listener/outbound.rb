@@ -8,7 +8,27 @@ module Librevox
     class Outbound < Base
       include Librevox::Applications
 
-      def application app, args=nil, params={}, &block
+      def self.start(task, args = {})
+        host = args[:host] || "localhost"
+        port = args[:port] || 8084
+
+        task.async do
+          endpoint = Async::IO::Endpoint.tcp(host, port)
+          endpoint.accept do |socket|
+            stream = Async::IO::Stream.new(socket)
+            connection = Librevox::Connection.new(stream)
+
+            listener = new(connection)
+            listener.read_loop
+          rescue => e
+            Librevox.logger.error "Session error: #{e.message}"
+          ensure
+            stream&.close
+          end
+        end
+      end
+
+      def application(app, args = nil, params = {}, &block)
         parts = ["sendmsg", "call-command: execute", "execute-app-name: #{app}"]
         parts << "execute-app-arg: #{args}" if args && !args.empty?
 
@@ -23,12 +43,12 @@ module Librevox
       end
 
       # This should probably be in Application#sendmsg instead.
-      def sendmsg msg 
+      def sendmsg(msg)
         send_data "sendmsg\n%s" % msg
       end
 
       attr_accessor :session
-      
+
       # Called when a new session is initiated.
       def session_initiated
       end
@@ -57,11 +77,11 @@ module Librevox
         super
       end
 
-      def variable name
+      def variable(name)
         session[:"variable_#{name}"]
       end
 
-      def update_session &block
+      def update_session(&block)
         api.command "uuid_dump", session[:unique_id], &block
       end
     end

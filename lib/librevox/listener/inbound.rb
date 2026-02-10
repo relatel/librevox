@@ -18,7 +18,29 @@ module Librevox
         end
       end
 
-      def initialize args={}
+      def self.start(task, args = {})
+        host = args[:host] || "localhost"
+        port = args[:port] || 8021
+
+        task.async do
+          loop do
+            endpoint = Async::IO::Endpoint.tcp(host, port)
+            stream = Async::IO::Stream.new(endpoint.connect)
+            connection = Librevox::Connection.new(stream)
+
+            listener = new(connection, args)
+            listener.connection_completed
+            listener.read_loop
+          rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET => e
+            Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
+            sleep 1
+          ensure
+            stream&.close
+          end
+        end
+      end
+
+      def initialize(args = {})
         super()
         @auth = args[:auth] || "ClueCon"
         @host, @port = args.values_at(:host, :port)
@@ -38,12 +60,6 @@ module Librevox
           [*values].each do |value|
             send_data "filter #{header} #{value}\n\n"
           end
-        end
-      end
-
-      def unbind
-        unless @shutdown
-          Librevox.logger.error "Lost connection. Reconnecting in 1 second."
         end
       end
     end
