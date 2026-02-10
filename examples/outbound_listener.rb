@@ -16,7 +16,11 @@ class MyApp < Librevox::Listener::Outbound
           # Set channel variables
           set "playback_terminators", "#"
 
-          # Use the bridge application to connect to endpoints
+          # For apps not yet wrapped by a named helper, call
+          # `application` directly:
+          #
+          #   application "record", "/recordings/#{digit}.wav"
+          #
           bridge "sofia/foo/bar", "sofia/foo/baz"
         end
       end
