@@ -53,8 +53,8 @@ module Librevox
       def session_initiated
       end
 
-      def post_init
-        super
+      def initialize(connection = nil)
+        super(connection)
         @session = nil
         @application_queue = []
 
@@ -62,7 +62,7 @@ module Librevox
         send_data "myevents\n\n"
         @application_queue << proc {}
         send_data "linger\n\n"
-        @application_queue << proc {session_initiated}
+        @application_queue << proc { session_initiated }
       end
 
       def handle_response

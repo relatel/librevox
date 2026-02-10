@@ -40,8 +40,8 @@ module Librevox
         end
       end
 
-      def initialize(args = {})
-        super()
+      def initialize(connection = nil, args = {})
+        super(connection)
         @auth = args[:auth] || "ClueCon"
         @host, @port = args.values_at(:host, :port)
       end

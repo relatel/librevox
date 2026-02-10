@@ -6,12 +6,9 @@ require 'librevox/commands'
 module Librevox
   module Listener
     class Base
-      def self.new(connection = nil, *args)
-        instance = allocate
-        instance.send(:initialize, *args)
-        instance.connection = connection
-        instance.post_init
-        instance
+      def initialize(connection = nil)
+        @connection = connection
+        @command_queue = []
       end
 
       class << self
@@ -57,12 +54,7 @@ module Librevox
       end
 
       attr_accessor :response
-      attr_writer :connection
       alias :event :response
-
-      def post_init
-        @command_queue = []
-      end
 
       def receive_data(data)
         @buf ||= String.new
