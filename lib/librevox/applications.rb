@@ -14,6 +14,12 @@ module Librevox
       application "answer", &block
     end
 
+    # Parks a call, keeping it active without routing it anywhere.
+    # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_park
+    def park(&block)
+      application "park", &block
+    end
+
     # Make an attended transfer
     # @example
     #   att_xfer("user/davis")

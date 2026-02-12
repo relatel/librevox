@@ -85,7 +85,9 @@ Outbound listeners have the same event functionality as inbound, but scoped to t
 
 ### Dialplan
 
-When FreeSWITCH connects, `session_initiated` is called. Build your dialplan here:
+When FreeSWITCH connects, `session_initiated` is called. Build your dialplan here.
+
+Applications can be called with or without blocks. Without a block, applications are fired sequentially:
 
 ```ruby
 class MyOutbound < Librevox::Listener::Outbound
@@ -98,14 +100,37 @@ class MyOutbound < Librevox::Listener::Outbound
 end
 ```
 
+With blocks, the block is called when the application completes, letting you nest applications and react to results:
+
+```ruby
+class MyOutbound < Librevox::Listener::Outbound
+  def session_initiated
+    answer do
+      playback "welcome.wav" do
+        play_and_get_digits "enter-digit.wav", "bad-digit.wav" do |digit|
+          set "user_input", digit
+          bridge "sofia/gateway/trunk/#{digit}"
+        end
+      end
+    end
+  end
+end
+```
+
+For apps not yet wrapped by a named helper, call `application` directly:
+
+```ruby
+application "park"
+```
+
 Channel variables are available through `session` (a hash) and `variable`:
 
 ```ruby
 def session_initiated
-  answer
-  digit = play_and_get_digits "enter-number.wav", "error.wav"
-  puts "User pressed #{digit}"
-  hangup
+  answer do
+    number = variable(:destination_number)
+    playback "greeting-#{number}.wav"
+  end
 end
 ```
 
