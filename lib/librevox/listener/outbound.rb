@@ -13,12 +13,11 @@ module Librevox
         port = args[:port] || 8084
 
         task.async do
-          endpoint = Async::IO::Endpoint.tcp(host, port)
+          endpoint = IO::Endpoint.tcp(host, port)
           endpoint.accept do |socket|
-            stream = Async::IO::Stream.new(socket)
-            connection = Librevox::Connection.new(stream)
+            stream = IO::Stream(socket)
 
-            listener = new(connection)
+            listener = new(stream)
             listener.read_loop
           rescue => e
             Librevox.logger.error "Session error: #{e.message}"

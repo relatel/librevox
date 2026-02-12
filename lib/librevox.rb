@@ -45,8 +45,8 @@ module Librevox
   #   end
   def self.start(klass = nil, args = {}, &block)
     require 'async'
-    require 'async/io'
-    require 'async/io/stream'
+    require 'io/endpoint'
+    require 'io/stream'
 
     logger.info "Starting Librevox"
 
@@ -69,23 +69,4 @@ module Librevox
     task&.stop
   end
 
-  # Wraps an Async::IO::Stream for production use.
-  class Connection
-    def initialize(stream)
-      @stream = stream
-    end
-
-    def write(data)
-      @stream.write(data)
-      @stream.flush
-    end
-
-    def read_partial(size)
-      @stream.read_partial(size)
-    end
-
-    def close
-      @stream.close
-    end
-  end
 end

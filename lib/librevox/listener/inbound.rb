@@ -24,11 +24,10 @@ module Librevox
 
         task.async do
           loop do
-            endpoint = Async::IO::Endpoint.tcp(host, port)
-            stream = Async::IO::Stream.new(endpoint.connect)
-            connection = Librevox::Connection.new(stream)
+            endpoint = IO::Endpoint.tcp(host, port)
+            stream = IO::Stream(endpoint.connect)
 
-            listener = new(connection, args)
+            listener = new(stream, args)
             listener.connection_completed
             listener.read_loop
           rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET => e

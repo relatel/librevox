@@ -10,7 +10,7 @@ class MockConnection
     @data = []
   end
 
-  def write(data)
+  def write(data, **)
     @data << data
   end
 

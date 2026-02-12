@@ -83,7 +83,7 @@ module Librevox
       end
 
       def send_data(data)
-        @connection&.write(data)
+        @connection&.write(data, flush: true)
       end
 
       def read_loop

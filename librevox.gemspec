@@ -19,5 +19,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_dependency "async", "~> 2.0"
-  s.add_dependency "async-io", "~> 1.0"
+  s.add_dependency "io-endpoint", "~> 0.13"
+  s.add_dependency "io-stream", "~> 0.6"
+  s.add_dependency "logger"
 end
