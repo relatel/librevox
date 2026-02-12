@@ -51,22 +51,15 @@ module Librevox
     logger.info "Starting Librevox"
 
     Async do |task|
-      trap("TERM") { stop(task) }
-      trap("INT") { stop(task) }
-      trap("HUP") { reopen_log }
-
       @task = task
       block_given? ? instance_eval(&block) : run(klass, args)
     end
+  rescue Interrupt
+    logger.info "Terminating Librevox"
   end
 
   def self.run(klass, args = {})
     klass.start(@task, args)
-  end
-
-  def self.stop(task = nil)
-    logger.info "Terminating Librevox"
-    task&.stop
   end
 
 end
