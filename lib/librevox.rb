@@ -54,7 +54,7 @@ module Librevox
       @task = task
       block_given? ? instance_eval(&block) : run(klass, args)
     end
-  rescue Interrupt
+  rescue Interrupt, SignalException
     logger.info "Terminating Librevox"
   end
 
