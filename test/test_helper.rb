@@ -16,6 +16,7 @@ module Librevox::Test
     def assert_send_application(obj, app, args = nil)
       parts = ["sendmsg", "call-command: execute", "execute-app-name: #{app}"]
       parts << "execute-app-arg: #{args}" if args
+      parts << "event-lock: true"
 
       assert_equal parts.join("\n") + "\n\n", obj.outgoing_data.shift
     end

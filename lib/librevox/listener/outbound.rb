@@ -30,6 +30,7 @@ module Librevox
       def application(app, args = nil, params = {}, &block)
         parts = ["sendmsg", "call-command: execute", "execute-app-name: #{app}"]
         parts << "execute-app-arg: #{args}" if args && !args.empty?
+        parts << "event-lock: true"
 
         send_data parts.join("\n") + "\n\n"
 
