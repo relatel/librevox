@@ -25,16 +25,15 @@ module Librevox
         barrier.async do
           endpoint = IO::Endpoint.tcp(host, port)
           loop do
-            stream = IO::Stream(endpoint.connect)
-
-            listener = new(stream, args)
-            listener.connection_completed
-            listener.read_loop
+            endpoint.connect do |socket|
+              stream = IO::Stream(socket)
+              listener = new(stream, args)
+              listener.connection_completed
+              listener.read_loop
+            end
           rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET => e
             Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
             sleep 1
-          ensure
-            stream&.close
           end
         end
       end
