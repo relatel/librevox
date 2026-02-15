@@ -45,21 +45,37 @@ module Librevox
   #   end
   def self.start(klass = nil, args = {}, &block)
     require 'async'
+    require 'async/barrier'
     require 'io/endpoint/host_endpoint'
     require 'io/stream'
 
     logger.info "Starting Librevox"
 
-    Async do |task|
-      @task = task
-      block_given? ? instance_eval(&block) : run(klass, args)
+    Async do
+      barrier = Async::Barrier.new
+      begin
+        if block_given?
+          Runner.new(barrier).instance_eval(&block)
+        else
+          klass.start(barrier, args)
+        end
+        barrier.wait
+      ensure
+        barrier.stop
+      end
     end
   rescue Interrupt, SignalException
     logger.info "Terminating Librevox"
   end
 
-  def self.run(klass, args = {})
-    klass.start(@task, args)
+  class Runner
+    def initialize(barrier)
+      @barrier = barrier
+    end
+
+    def run(klass, args = {})
+      klass.start(@barrier, args)
+    end
   end
 
 end

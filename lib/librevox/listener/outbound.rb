@@ -8,11 +8,11 @@ module Librevox
     class Outbound < Base
       include Librevox::Applications
 
-      def self.start(task, args = {})
+      def self.start(barrier, args = {})
         host = args[:host] || "localhost"
         port = args[:port] || 8084
 
-        task.async do
+        barrier.async do
           endpoint = IO::Endpoint.tcp(host, port)
           endpoint.accept do |socket|
             stream = IO::Stream(socket)

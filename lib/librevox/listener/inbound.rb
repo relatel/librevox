@@ -18,13 +18,13 @@ module Librevox
         end
       end
 
-      def self.start(task, args = {})
+      def self.start(barrier, args = {})
         host = args[:host] || "localhost"
         port = args[:port] || 8021
 
-        task.async do
+        barrier.async do
+          endpoint = IO::Endpoint.tcp(host, port)
           loop do
-            endpoint = IO::Endpoint.tcp(host, port)
             stream = IO::Stream(endpoint.connect)
 
             listener = new(stream, args)
