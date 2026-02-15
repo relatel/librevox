@@ -45,7 +45,7 @@ module Librevox
   #   end
   def self.start(klass = nil, args = {}, &block)
     require 'async'
-    require 'io/endpoint'
+    require 'io/endpoint/host_endpoint'
     require 'io/stream'
 
     logger.info "Starting Librevox"
