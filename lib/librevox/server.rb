@@ -11,7 +11,7 @@ module Librevox
 
     attr :endpoint
 
-    def accept(socket)
+    def accept(socket, address)
       stream = IO::Stream(socket)
       connection = Protocol::Connection.new(stream)
 
