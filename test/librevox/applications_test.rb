@@ -189,6 +189,12 @@ class TestApplications < Minitest::Test
     assert_equal "foo=bar", app[:args]
   end
 
+  def test_multiset
+    app = AppTest.multiset("foo" => "1", "bar" => "2")
+    assert_equal "multiset", app[:name]
+    assert_equal "^^|foo=1|bar=2", app[:args]
+  end
+
   def test_transfer
     app = AppTest.transfer "new_extension"
     assert_equal "transfer", app[:name]

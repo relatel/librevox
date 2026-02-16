@@ -233,6 +233,15 @@ module Librevox
       application "set", "#{variable}=#{value}", &block
     end
 
+    # Sets multiple channel variables in a single application call.
+    # @example
+    #   multiset "var1" => "val1", "var2" => "val2"
+    # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_multiset
+    def multiset(vars, &block)
+      args = "^^|" + vars.map { |k, v| "#{k}=#{v}" }.join("|")
+      application "multiset", args, &block
+    end
+
     # Transfers the current channel to a new context.
     # @example
     #   transfer "new_context"
