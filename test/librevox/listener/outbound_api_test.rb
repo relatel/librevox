@@ -28,11 +28,9 @@ class TestOutboundListenerWithAppsAndApi < Minitest::Test
     3.times {@listener.outgoing_data.shift}
   end
 
-  def test_wait_for_response_before_calling_next_app_or_cmd
+  def test_wait_for_execute_complete_before_calling_next_app_or_cmd
     assert_send_application @listener, "foo"
-    command_reply :body => "+OK"
-    assert_update_session @listener
-    channel_data
+    execute_complete
 
     assert_send_command @listener, "api bar"
     api_response :body => "+OK"

@@ -68,5 +68,13 @@ module Librevox::Test
 
       @listener.receive_message(headers, body)
     end
+
+    def execute_complete(args = {})
+      body = {"Event-Name" => "CHANNEL_EXECUTE_COMPLETE"}.merge(args)
+      body_str = body.map {|k,v| "#{k}: #{v}"}.join("\n")
+      headers = "Content-Length: #{body_str.size}"
+
+      @listener.receive_message(headers, body_str)
+    end
   end
 end

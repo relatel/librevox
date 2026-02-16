@@ -32,31 +32,14 @@ class TestOutboundListenerWithAppReadingData < Minitest::Test
     assert_send_nothing @listener
   end
 
-  def test_send_uuid_dump_to_get_channel_var_after_getting_response
-    command_reply "Reply-Text" => "+OK"
-    assert_update_session @listener, 1234
-  end
-
-  def test_update_session_with_new_data
-    command_reply :body => "+OK"
-
-    assert_update_session @listener, 1234
-    api_response :body => {
-      "Event-Name"  => "CHANNEL_DATA",
-      "Session-Var" => "Second"
-    }
+  def test_update_session_from_execute_complete
+    execute_complete "Session-Var" => "Second"
 
     assert_equal "Second", @listener.session[:session_var]
   end
 
   def test_return_value_of_channel_variable
-    command_reply :body => "+OK"
-
-    assert_update_session @listener, 1234
-    api_response :body => {
-      "Event-Name"       => "CHANNEL_DATA",
-      "variable_app_var" => "Second"
-    }
+    execute_complete "variable_app_var" => "Second"
 
     assert_send_application @listener, "send", "Second"
   end

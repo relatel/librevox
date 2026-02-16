@@ -29,20 +29,12 @@ class TestOutboundListenerWithNonNestedApps < Minitest::Test
     3.times {@listener.outgoing_data.shift}
   end
 
-  def test_wait_for_response_before_calling_next_app
+  def test_wait_for_execute_complete_before_calling_next_app
     assert_send_application @listener, "foo"
-    command_reply :body => "+OK"
-    assert_update_session @listener
-    channel_data "Unique-ID" => "1234"
+    execute_complete "Unique-ID" => "1234"
 
     assert_send_application @listener, "reader_app"
-    command_reply :body => "+OK"
-
-    assert_update_session @listener
-    api_response :body => {
-      "Event-Name"       => "CHANNEL_DATA",
-      "variable_app_var" => "Second"
-    }
+    execute_complete "variable_app_var" => "Second"
 
     assert_send_application @listener, "send", "the end: Second"
   end

@@ -22,9 +22,11 @@ module Librevox
         send_data parts.join("\n") + "\n\n"
 
         @application_queue.push(proc {
-          update_session do
+          @session = response.content
+
+          if block
             arg = params[:variable] ? variable(params[:variable]) : nil
-            block.call(arg) if block
+            block.call(arg)
           end
         })
       end
@@ -43,13 +45,14 @@ module Librevox
       def initialize(connection = nil)
         super(connection)
         @session = nil
+        @reply_queue = []
         @application_queue = []
 
         send_data "connect\n\n"
         send_data "myevents\n\n"
-        @application_queue << proc {}
+        @reply_queue << proc {}
         send_data "linger\n\n"
-        @application_queue << proc { session_initiated }
+        @reply_queue << proc { session_initiated }
       end
 
       def handle_response
@@ -57,8 +60,10 @@ module Librevox
           @session = response.headers
         elsif response.event? && response.event == "CHANNEL_DATA"
           @session = response.content
-        elsif response.command_reply? && !response.event?
+        elsif response.event? && response.event == "CHANNEL_EXECUTE_COMPLETE"
           @application_queue.shift.call(response) if @application_queue.any?
+        elsif response.command_reply? && !response.event?
+          @reply_queue.shift.call(response) if @reply_queue.any?
         end
 
         super

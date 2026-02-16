@@ -30,9 +30,7 @@ class TestOutboundListenerWithApps < Minitest::Test
     assert_send_application @listener, "foo"
     assert_send_nothing @listener
 
-    command_reply "Reply-Text" => "+OK"
-    assert_update_session @listener
-    channel_data
+    execute_complete
 
     assert_send_application @listener, "bar"
     assert_send_nothing @listener
@@ -62,6 +60,14 @@ class TestOutboundListenerWithApps < Minitest::Test
 
     response "Content-Type" => "text/disconnect-notice",
              :body          => "Lingering"
+
+    assert_send_nothing @listener
+  end
+
+  def test_not_be_driven_forward_by_command_reply
+    assert_send_application @listener, "foo"
+
+    command_reply "Reply-Text" => "+OK"
 
     assert_send_nothing @listener
   end
