@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'librevox/listener/base'
+require 'librevox/client'
 
 module Librevox
   module Listener
@@ -18,30 +19,14 @@ module Librevox
         end
       end
 
-      def self.start(barrier, args = {})
-        host = args[:host] || "localhost"
-        port = args[:port] || 8021
-
-        barrier.async do
-          endpoint = IO::Endpoint.tcp(host, port)
-          loop do
-            endpoint.connect do |socket|
-              stream = IO::Stream(socket)
-              listener = new(stream, args)
-              listener.connection_completed
-              listener.read_loop
-            end
-          rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET => e
-            Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
-            sleep 1
-          end
-        end
+      def self.start(barrier, host: "localhost", port: 8021, **options)
+        endpoint = IO::Endpoint.tcp(host, port)
+        Client.new(self, endpoint, **options).run(barrier)
       end
 
       def initialize(connection = nil, args = {})
         super(connection)
         @auth = args[:auth] || "ClueCon"
-        @host, @port = args.values_at(:host, :port)
       end
 
       def connection_completed

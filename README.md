@@ -16,6 +16,11 @@ A Ruby library for interacting with [FreeSWITCH](http://www.freeswitch.org) thro
 - [Closing Connections](#closing-connections)
 - [Command Socket](#command-socket)
 - [Configuration](#configuration)
+- [Event Socket Protocol](#event-socket-protocol)
+  - [Outbound session lifecycle](#outbound-session-lifecycle)
+  - [sendmsg and application execution](#sendmsg-and-application-execution)
+  - [event-lock](#event-lock)
+  - [Application queue and command queue](#application-queue-and-command-queue)
 - [API Documentation](#api-documentation)
 - [License](#license)
 
@@ -209,6 +214,83 @@ Librevox.options[:log_level] = Logger::DEBUG    # default: Logger::INFO
 ```
 
 When started with `Librevox.start`, sending `SIGHUP` to the process reopens the log file, making it compatible with `logrotate(1)`.
+
+## Event Socket Protocol
+
+Understanding the outbound event socket protocol is important for working on
+librevox internals.
+
+### Outbound session lifecycle
+
+When FreeSWITCH hits a `socket` application in the dialplan, it connects to the
+outbound listener. The listener sends three setup commands before any
+application logic runs:
+
+```
+Listener → FS:  connect
+FS → Listener:  (channel data — becomes @session)
+
+Listener → FS:  myevents
+FS → Listener:  command/reply +OK
+
+Listener → FS:  linger
+FS → Listener:  command/reply +OK  → triggers session_initiated
+```
+
+### sendmsg and application execution
+
+When an application (e.g. `answer`, `playback`, `bridge`) is executed via
+`sendmsg`, FreeSWITCH always sends the `command/reply +OK` immediately — it is
+an acknowledgement that the sendmsg was received, **not** that the application
+finished. Application completion is signalled by a `CHANNEL_EXECUTE_COMPLETE`
+event:
+
+```
+Listener → FS:  sendmsg
+                call-command: execute
+                execute-app-name: playback
+                execute-app-arg: welcome.wav
+                event-lock: true
+
+FS → Listener:  command/reply +OK              ← immediate ack
+FS → Listener:  CHANNEL_EXECUTE event          ← app started
+                ...app is running...
+FS → Listener:  CHANNEL_EXECUTE_COMPLETE event ← app finished
+```
+
+### event-lock
+
+The `event-lock: true` header serializes application execution **on the
+channel**. It does not change what is sent back on the socket.
+
+Without `event-lock`, if multiple sendmsg commands are pipelined, FreeSWITCH
+may dequeue and start executing the next application before the current one
+finishes. With `event-lock: true`, FreeSWITCH sets an internal flag
+(`CF_EVENT_LOCK`) on the channel that prevents the next queued sendmsg from
+being processed until the current application completes.
+
+### Application queue and command queue
+
+Librevox uses two queues to drive the outbound dialplan:
+
+- **`@application_queue`** — procs pushed by each `application()` call, shifted
+  when a `command/reply` (non-event) arrives.
+- **`@command_queue`** — callbacks pushed by `api.command` (e.g. `uuid_dump`),
+  shifted when an `api/response` arrives.
+
+After each application, `update_session` sends `api uuid_dump` to refresh
+channel variables. The uuid_dump response updates `@session`, then the user's
+block runs — which typically calls the next application, continuing the chain.
+
+**Known limitation:** the application queue currently advances on the immediate
+`command/reply`, not on `CHANNEL_EXECUTE_COMPLETE`. Combined with `event-lock`,
+this works because FreeSWITCH won't start the next application until the
+current one finishes. However, `uuid_dump` (an API command, not a channel
+application) executes immediately regardless of `event-lock`. For fast
+applications like `answer` or `set` this is fine — they complete before the
+`command/reply` reaches the listener. For slow applications like
+`play_and_get_digits` or `bridge`, channel variables set by the application may
+not yet be available when the callback fires.
 
 ## API Documentation
 

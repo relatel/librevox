@@ -56,13 +56,7 @@ module Librevox
       attr_accessor :response
       alias :event :response
 
-      def receive_data(data)
-        @buf ||= String.new
-        @buf << data
-        process_buffer
-      end
-
-      def receive_request(header, content)
+      def receive_message(header, content)
         @response = Librevox::Response.new(header, content)
         handle_response
       end
@@ -83,12 +77,13 @@ module Librevox
       end
 
       def send_data(data)
-        @connection&.write(data, flush: true)
+        @connection&.write(data)
       end
 
       def read_loop
-        while data = @connection.read_partial(4096)
-          receive_data(data)
+        while msg = @connection.read_message
+          @response = msg
+          handle_response
         end
       end
 
@@ -102,35 +97,6 @@ module Librevox
       alias :done :close_connection_after_writing
 
       private
-
-      def process_buffer
-        loop do
-          if @content_length
-            break if @buf.length < @content_length
-            content = @buf.slice!(0, @content_length)
-            @content_length = nil
-            receive_request(@header_buffer, content)
-          else
-            idx = @buf.index("\n\n")
-            break unless idx
-
-            @header_buffer = @buf.slice!(0, idx)
-            @buf.slice!(0, 2) # remove \n\n
-
-            next if @header_buffer.empty?
-
-            if @header_buffer =~ /Content-Length:\s*(\d+)/i
-              @content_length = $1.to_i
-              if @content_length == 0
-                @content_length = nil
-                receive_request(@header_buffer, "")
-              end
-            else
-              receive_request(@header_buffer, "")
-            end
-          end
-        end
-      end
 
       def invoke_event_hooks
         event = response.event.downcase.to_sym

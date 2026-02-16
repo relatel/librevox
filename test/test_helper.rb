@@ -57,17 +57,16 @@ module Librevox::Test
       end
 
       headers["Content-Length"] = body.size if body
-      parts = [headers.map {|k, v| "#{k}: #{v}"}.join("\n")]
-      parts << body if body
+      header_str = headers.map {|k, v| "#{k}: #{v}"}.join("\n")
 
-      @listener.receive_data parts.join("\n\n") + "\n\n"
+      @listener.receive_message(header_str, body.to_s)
     end
 
     def event(name)
       body    = "Event-Name: #{name}"
       headers = "Content-Length: #{body.size}"
 
-      @listener.receive_data "#{headers}\n\n#{body}\n\n"
+      @listener.receive_message(headers, body)
     end
   end
 end

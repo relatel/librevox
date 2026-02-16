@@ -10,8 +10,12 @@ class MockConnection
     @data = []
   end
 
-  def write(data, **)
+  def write(data)
     @data << data
+  end
+
+  def read_message
+    nil
   end
 
   def close
@@ -69,7 +73,7 @@ module EventTests
     @listener.on_event_block = proc {|e| send_data "from on_event: #{e.object_id}"}
 
     # Establish session
-    @listener.receive_data("Content-Length: 0\nTest: Testing\n\n")
+    @listener.receive_message("Content-Length: 0\nTest: Testing", "")
   end
 
   def test_add_event_hook

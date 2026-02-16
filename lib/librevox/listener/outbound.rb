@@ -2,29 +2,16 @@
 
 require 'librevox/listener/base'
 require 'librevox/applications'
+require 'librevox/server'
 
 module Librevox
   module Listener
     class Outbound < Base
       include Librevox::Applications
 
-      def self.start(barrier, args = {})
-        host = args[:host] || "localhost"
-        port = args[:port] || 8084
-
-        barrier.async do
-          endpoint = IO::Endpoint.tcp(host, port)
-          endpoint.accept do |socket|
-            stream = IO::Stream(socket)
-
-            listener = new(stream)
-            listener.read_loop
-          rescue => e
-            Librevox.logger.error "Session error: #{e.message}"
-          ensure
-            stream&.close
-          end
-        end
+      def self.start(barrier, host: "localhost", port: 8084)
+        endpoint = IO::Endpoint.tcp(host, port)
+        Server.new(self, endpoint).run(barrier)
       end
 
       def application(app, args = nil, params = {}, &block)

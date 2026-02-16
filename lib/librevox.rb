@@ -4,6 +4,9 @@ require 'logger'
 require 'librevox/version'
 require 'librevox/listener/inbound'
 require 'librevox/listener/outbound'
+require 'librevox/server'
+require 'librevox/client'
+require 'librevox/runner'
 require 'librevox/command_socket'
 
 module Librevox
@@ -32,18 +35,18 @@ module Librevox
     @logger = logger!
   end
 
-  # When called without a block, it will start the listener that is passed as
-  # first argument:
+  # Start a single listener:
   #
-  #   Librevox.start SomeListener
+  #   Librevox.start MyInbound
+  #   Librevox.start MyInbound, host: "1.2.3.4", auth: "secret"
   #
-  # To start multiple listeners, call with a block and use `run`:
+  # Start multiple listeners with a block:
   #
   #   Librevox.start do
-  #     run SomeListener
-  #     run OtherListener
+  #     run MyInbound
+  #     run MyOutbound, port: 8084
   #   end
-  def self.start(klass = nil, args = {}, &block)
+  def self.start(klass = nil, **args, &block)
     require 'async'
     require 'async/barrier'
     require 'io/endpoint/host_endpoint'
@@ -54,10 +57,11 @@ module Librevox
     Async do
       barrier = Async::Barrier.new
       begin
+        runner = Runner.new(barrier)
         if block_given?
-          Runner.new(barrier).instance_eval(&block)
+          runner.instance_eval(&block)
         else
-          klass.start(barrier, args)
+          runner.run(klass, **args)
         end
         barrier.wait
       ensure
@@ -66,16 +70,6 @@ module Librevox
     end
   rescue Interrupt, SignalException
     logger.info "Terminating Librevox"
-  end
-
-  class Runner
-    def initialize(barrier)
-      @barrier = barrier
-    end
-
-    def run(klass, args = {})
-      klass.start(@barrier, args)
-    end
   end
 
 end

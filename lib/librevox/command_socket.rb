@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require 'socket'
+require 'io/stream'
 require 'librevox/response'
 require 'librevox/commands'
 require 'librevox/applications'
+require 'librevox/protocol/connection'
 
 module Librevox
   class CommandSocket
@@ -19,39 +21,25 @@ module Librevox
 
     def connect
       @socket = TCPSocket.open(@server, @port)
-      @socket.print "auth #{@auth}\n\n"
+      stream = IO::Stream(@socket)
+      @connection = Protocol::Connection.new(stream)
+      @connection.write "auth #{@auth}\n\n"
       read_response
     end
 
     def command(*args)
-      @socket.print "#{super(*args)}\n\n"
+      @connection.write "#{super(*args)}\n\n"
       read_response
     end
 
     def read_response
-      response = Librevox::Response.new
-      until response.command_reply? or response.api_response?
-        response.headers = read_headers
+      while msg = @connection.read_message
+        return msg if msg.command_reply? || msg.api_response?
       end
-
-      length = response.headers[:content_length].to_i
-      response.content = @socket.read(length) if length > 0
-
-      response
-    end
-
-    def read_headers
-      headers = String.new
-
-      while line = @socket.gets and !line.chomp.empty?
-        headers += line
-      end
-
-      headers
     end
 
     def close
-      @socket.close
+      @connection.close
     end
   end
 end
