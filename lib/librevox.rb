@@ -12,8 +12,8 @@ require 'librevox/command_socket'
 module Librevox
   def self.options
     @options ||= {
-      :log_file   => STDOUT,
-      :log_level  => Logger::INFO
+      log_file: STDOUT,
+      log_level: Logger::INFO
     }
   end
 
