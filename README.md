@@ -100,11 +100,23 @@ class MyOutbound < Librevox::Listener::Outbound
     answer do
       playback "welcome.wav" do
         play_and_get_digits "enter-digit.wav", "bad-digit.wav" do |digit|
-          set "user_input", digit do
-            bridge "sofia/gateway/trunk/#{digit}"
-          end
+          bridge "sofia/gateway/trunk/#{digit}"
         end
       end
+    end
+  end
+end
+```
+
+Instant applications like `set` and `multiset` only set channel variables in memory — they complete before the acknowledgement reaches the listener. These can be called without a callback before the next application:
+
+```ruby
+def session_initiated
+  answer do
+    set "foo", "bar"
+    multiset "baz" => "1", "qux" => "2"
+    playback "welcome.wav" do
+      hangup
     end
   end
 end
