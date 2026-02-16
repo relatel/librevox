@@ -69,7 +69,10 @@ module Librevox
       end
 
       def update_session(&block)
-        api.command "uuid_dump", session[:unique_id], &block
+        api.command "uuid_dump", session[:unique_id] do |response|
+          @session = response.content
+          block.call if block
+        end
       end
     end
   end

@@ -32,7 +32,11 @@ module Librevox
       end
 
       def close
+        return if @stream.closed?
+
         @stream.close
+      rescue Errno::EPIPE, Errno::ECONNRESET
+        # Remote end already closed
       end
     end
   end
