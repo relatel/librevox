@@ -92,20 +92,7 @@ Outbound listeners have the same event functionality as inbound, but scoped to t
 
 When FreeSWITCH connects, `session_initiated` is called. Build your dialplan here.
 
-Applications can be called with or without blocks. Without a block, applications are fired sequentially:
-
-```ruby
-class MyOutbound < Librevox::Listener::Outbound
-  def session_initiated
-    answer
-    set "some_var", "some value"
-    playback "path/to/file"
-    hangup
-  end
-end
-```
-
-With blocks, the block is called when the application completes, letting you nest applications and react to results:
+Applications use callbacks (blocks) to chain execution. The block is called when the application completes (`CHANNEL_EXECUTE_COMPLETE`), so the next application is only sent after the previous one finishes:
 
 ```ruby
 class MyOutbound < Librevox::Listener::Outbound
@@ -113,8 +100,9 @@ class MyOutbound < Librevox::Listener::Outbound
     answer do
       playback "welcome.wav" do
         play_and_get_digits "enter-digit.wav", "bad-digit.wav" do |digit|
-          set "user_input", digit
-          bridge "sofia/gateway/trunk/#{digit}"
+          set "user_input", digit do
+            bridge "sofia/gateway/trunk/#{digit}"
+          end
         end
       end
     end
@@ -145,9 +133,11 @@ To avoid name clashes between applications and commands, commands are accessed t
 
 ```ruby
 def session_initiated
-  answer
-  api.status
-  api.originate 'sofia/user/coltrane', :extension => "1234"
+  answer do
+    api.status do
+      api.originate 'sofia/user/coltrane', :extension => "1234"
+    end
+  end
 end
 ```
 
@@ -274,23 +264,13 @@ being processed until the current application completes.
 Librevox uses two queues to drive the outbound dialplan:
 
 - **`@application_queue`** — procs pushed by each `application()` call, shifted
-  when a `command/reply` (non-event) arrives.
-- **`@command_queue`** — callbacks pushed by `api.command` (e.g. `uuid_dump`),
-  shifted when an `api/response` arrives.
+  when a `CHANNEL_EXECUTE_COMPLETE` event arrives. The event content carries all
+  channel variables, so `@session` is updated before the user's block runs.
+- **`@reply_queue`** — procs for setup commands (`connect`, `myevents`,
+  `linger`), shifted when a `command/reply` (non-event) arrives.
 
-After each application, `update_session` sends `api uuid_dump` to refresh
-channel variables. The uuid_dump response updates `@session`, then the user's
-block runs — which typically calls the next application, continuing the chain.
-
-**Known limitation:** the application queue currently advances on the immediate
-`command/reply`, not on `CHANNEL_EXECUTE_COMPLETE`. Combined with `event-lock`,
-this works because FreeSWITCH won't start the next application until the
-current one finishes. However, `uuid_dump` (an API command, not a channel
-application) executes immediately regardless of `event-lock`. For fast
-applications like `answer` or `set` this is fine — they complete before the
-`command/reply` reaches the listener. For slow applications like
-`play_and_get_digits` or `bridge`, channel variables set by the application may
-not yet be available when the callback fires.
+API commands (`api.command`) have their own callback shifted when an
+`api/response` arrives.
 
 ## API Documentation
 
