@@ -49,10 +49,8 @@ module Librevox
         @application_queue = []
 
         send_data "connect\n\n"
-        send_data "myevents\n\n"
-        @reply_queue << proc {}
-        send_data "linger\n\n"
-        @reply_queue << proc { session_initiated }
+        send_command "myevents\n\n"
+        send_command("linger\n\n") { session_initiated }
       end
 
       def handle_response
@@ -78,6 +76,13 @@ module Librevox
           @session = response.content
           block.call if block
         end
+      end
+
+      private
+
+      def send_command(data, &block)
+        send_data data
+        @reply_queue << (block || proc {})
       end
     end
   end

@@ -39,3 +39,25 @@ class TestOutboundListenerWithUpdateSessionCallback < Minitest::Test
     assert_send_application @listener, "send", "yay, Second"
   end
 end
+
+class TestOutboundReplyQueueOrdering < Minitest::Test
+  include Librevox::Test::ListenerHelpers
+  include Librevox::Test::Matchers
+
+  def setup
+    @listener = Librevox::Listener::Outbound.new(MockConnection.new)
+  end
+
+  def test_session_initiated_fires_on_linger_reply_not_myevents_reply
+    # connect response sets session
+    command_reply "Unique-ID" => "1234"
+
+    # myevents reply — should not trigger session_initiated
+    @listener.outgoing_data.clear
+    command_reply "Reply-Text" => "+OK Events Enabled"
+    assert_send_nothing @listener
+
+    # linger reply — should trigger session_initiated
+    command_reply "Reply-Text" => "+OK will linger"
+  end
+end
