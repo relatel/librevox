@@ -70,6 +70,9 @@ module Librevox::Test
     end
 
     def execute_complete(args = {})
+      # sendmsg ack — always arrives before CHANNEL_EXECUTE_COMPLETE
+      command_reply "Reply-Text" => "+OK"
+
       body = {"Event-Name" => "CHANNEL_EXECUTE_COMPLETE"}.merge(args)
       body_str = body.map {|k,v| "#{k}: #{v}"}.join("\n")
       headers = "Content-Length: #{body_str.size}"

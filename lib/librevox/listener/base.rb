@@ -50,7 +50,7 @@ module Librevox
       def command(msg, &block)
         send_data "#{msg}\n\n"
 
-        @command_queue.push(block)
+        @command_queue.push(block || proc {})
       end
 
       attr_accessor :response
@@ -62,8 +62,9 @@ module Librevox
       end
 
       def handle_response
-        if response.api_response? && @command_queue.any?
-          @command_queue.shift.call(response)
+        if response.reply?
+          @command_queue.shift.call(response) if @command_queue.any?
+          return
         end
 
         if response.event?

@@ -39,6 +39,13 @@ module Librevox
       @headers[:content_type] == "command/reply"
     end
 
+    def reply?
+      return true if api_response?
+      return false if event?
+
+      command_reply?
+    end
+
     private
 
     def headers_2_hash(header_string)

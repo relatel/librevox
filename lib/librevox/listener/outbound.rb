@@ -15,25 +15,25 @@ module Librevox
       end
 
       def application(app, args = nil, params = {}, &block)
-        parts = ["sendmsg", "call-command: execute", "execute-app-name: #{app}"]
+        parts = ["call-command: execute", "execute-app-name: #{app}"]
         parts << "execute-app-arg: #{args}" if args && !args.empty?
         parts << "event-lock: true"
 
-        send_data parts.join("\n") + "\n\n"
-
-        @application_queue.push(proc {
+        sendmsg parts.join("\n") do
           @session = response.content
 
           if block
             arg = params[:variable] ? variable(params[:variable]) : nil
             block.call(arg)
           end
-        })
+        end
       end
 
-      # This should probably be in Application#sendmsg instead.
-      def sendmsg(msg)
-        send_data "sendmsg\n%s" % msg
+      def sendmsg(msg, &block)
+        send_data "sendmsg\n#{msg}\n\n"
+
+        @command_queue.push(proc {})
+        @application_queue.push(block || proc {})
       end
 
       attr_accessor :session
@@ -45,23 +45,18 @@ module Librevox
       def initialize(connection = nil)
         super(connection)
         @session = nil
-        @reply_queue = []
         @application_queue = []
 
-        send_data "connect\n\n"
-        send_command "myevents\n\n"
-        send_command("linger\n\n") { session_initiated }
+        command("connect") { @session = response.headers }
+        command "myevents"
+        command("linger") { session_initiated }
       end
 
       def handle_response
-        if session.nil?
-          @session = response.headers
-        elsif response.event? && response.event == "CHANNEL_DATA"
+        if response.event? && response.event == "CHANNEL_DATA"
           @session = response.content
         elsif response.event? && response.event == "CHANNEL_EXECUTE_COMPLETE"
           @application_queue.shift.call(response) if @application_queue.any?
-        elsif response.command_reply? && !response.event?
-          @reply_queue.shift.call(response) if @reply_queue.any?
         end
 
         super
@@ -76,13 +71,6 @@ module Librevox
           @session = response.content
           block.call if block
         end
-      end
-
-      private
-
-      def send_command(data, &block)
-        send_data data
-        @reply_queue << (block || proc {})
       end
     end
   end
