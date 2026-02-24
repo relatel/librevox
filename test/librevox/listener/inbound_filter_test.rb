@@ -12,6 +12,7 @@ class InboundFilterTestListener < Librevox::Listener::Inbound
 end
 
 class TestInboundListenerWithFiltering < Minitest::Test
+  prepend Librevox::Test::AsyncTest
   include Librevox::Test::ListenerHelpers
   include Librevox::Test::Matchers
   include EventTests
@@ -19,12 +20,24 @@ class TestInboundListenerWithFiltering < Minitest::Test
 
   def setup
     @listener = InboundFilterTestListener.new(MockConnection.new)
+    @session_task = Async { @listener.run_session }
+    # auth reply
+    command_reply "Reply-Text" => "+OK accepted"
+    # event reply
+    command_reply "Reply-Text" => "+OK event listener enabled plain"
+    # 3 filter replies
+    command_reply "Reply-Text" => "+OK filter added"
+    command_reply "Reply-Text" => "+OK filter added"
+    command_reply "Reply-Text" => "+OK filter added"
+    super
+  end
+
+  def teardown
+    @session_task&.stop
     super
   end
 
   def test_authorize_and_subscribe_to_events
-    @listener = InboundFilterTestListener.new(MockConnection.new)
-    @listener.connection_completed
     assert_equal "auth ClueCon\n\n", @listener.outgoing_data.shift
     assert_equal "event plain CUSTOM CHANNEL_EXECUTE\n\n", @listener.outgoing_data.shift
     assert_equal "filter Caller-Context default\n\n", @listener.outgoing_data.shift

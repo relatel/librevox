@@ -7,23 +7,29 @@ require 'librevox/listener/outbound'
 
 class OutboundListenerWithNestedApps < Librevox::Listener::Outbound
   def session_initiated
-    sample_app "foo" do
-      sample_app "bar"
-    end
+    sample_app "foo"
+    sample_app "bar"
   end
 end
 
 class TestOutboundListenerWithApps < Minitest::Test
+  prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
   def setup
     @listener = OutboundListenerWithNestedApps.new(MockConnection.new)
+    @session_task = Async { @listener.run_session }
 
     command_reply "Establish-Session" => "OK",
                   "Unique-ID"         => "1234"
     event_and_linger_replies
     3.times {@listener.outgoing_data.shift}
+  end
+
+  def teardown
+    @session_task&.stop
+    super
   end
 
   def test_only_send_one_app_at_a_time

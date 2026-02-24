@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'minitest/autorun'
+require 'async'
 require 'librevox'
 
 module Librevox::Test
@@ -60,6 +61,7 @@ module Librevox::Test
       header_str = headers.map {|k, v| "#{k}: #{v}"}.join("\n")
 
       @listener.receive_message(header_str, body.to_s)
+      yield_to_fibers
     end
 
     def event(name)
@@ -67,6 +69,7 @@ module Librevox::Test
       headers = "Content-Length: #{body.size}"
 
       @listener.receive_message(headers, body)
+      yield_to_fibers
     end
 
     def execute_complete(args = {})
@@ -78,6 +81,22 @@ module Librevox::Test
       headers = "Content-Length: #{body_str.size}"
 
       @listener.receive_message(headers, body_str)
+      yield_to_fibers
+    end
+
+    private
+
+    def yield_to_fibers
+      Async::Task.current.yield if Async::Task.current?
+    end
+  end
+
+  # Wraps each test method in Async { } so queue operations work.
+  module AsyncTest
+    def run(...)
+      Sync do
+        super
+      end
     end
   end
 end

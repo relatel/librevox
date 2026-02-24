@@ -29,21 +29,25 @@ module Librevox
         @auth = args[:auth] || "ClueCon"
       end
 
-      def connection_completed
+      def run_session
         Librevox.logger.info "Connected."
-        super
 
-        send_data "auth #{@auth}\n\n"
+        command "auth #{@auth}"
 
         events = self.class.subscribe_events || ['ALL']
-        send_data "event plain #{events.join(' ')}\n\n"
+        command "event plain #{events.join(' ')}"
 
         filters = self.class.subscribe_filters || {}
         filters.each do |header, values|
           [*values].each do |value|
-            send_data "filter #{header} #{value}\n\n"
+            command "filter #{header} #{value}"
           end
         end
+
+        connection_completed
+      end
+
+      def connection_completed
       end
     end
   end

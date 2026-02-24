@@ -7,18 +7,19 @@ require 'librevox/listener/outbound'
 
 class OutboundListenerWithReader < Librevox::Listener::Outbound
   def session_initiated
-    reader_app do |data|
-      application "send", data
-    end
+    data = reader_app
+    application "send", data
   end
 end
 
 class TestOutboundListenerWithAppReadingData < Minitest::Test
+  prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
   def setup
     @listener = OutboundListenerWithReader.new(MockConnection.new)
+    @session_task = Async { @listener.run_session }
 
     command_reply "Session-Var" => "First",
                   "Unique-ID"   => "1234"
@@ -26,6 +27,11 @@ class TestOutboundListenerWithAppReadingData < Minitest::Test
     3.times {@listener.outgoing_data.shift}
 
     assert_send_application @listener, "reader_app"
+  end
+
+  def teardown
+    @session_task&.stop
+    super
   end
 
   def test_not_send_anything_while_missing_response

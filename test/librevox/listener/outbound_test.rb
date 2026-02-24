@@ -12,6 +12,7 @@ class OutboundTestListener < Librevox::Listener::Outbound
 end
 
 class TestOutboundListener < Minitest::Test
+  prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
   include EventTests
@@ -19,12 +20,18 @@ class TestOutboundListener < Minitest::Test
 
   def setup
     @listener = OutboundTestListener.new(MockConnection.new)
+    @session_task = Async { @listener.run_session }
     command_reply(
       "Caller-Caller-Id-Number" => "8675309",
       "Unique-ID"               => "1234",
       "variable_some_var"       => "some value"
     )
     event_and_linger_replies
+    super
+  end
+
+  def teardown
+    @session_task&.stop
     super
   end
 

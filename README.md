@@ -20,7 +20,7 @@ A Ruby library for interacting with [FreeSWITCH](http://www.freeswitch.org) thro
   - [Outbound session lifecycle](#outbound-session-lifecycle)
   - [sendmsg and application execution](#sendmsg-and-application-execution)
   - [event-lock](#event-lock)
-  - [Application queue and command queue](#application-queue-and-command-queue)
+  - [Two fibers per connection](#two-fibers-per-connection)
 - [API Documentation](#api-documentation)
 - [License](#license)
 
@@ -92,33 +92,27 @@ Outbound listeners have the same event functionality as inbound, but scoped to t
 
 When FreeSWITCH connects, `session_initiated` is called. Build your dialplan here.
 
-Applications use callbacks (blocks) to chain execution. The block is called when the application completes (`CHANNEL_EXECUTE_COMPLETE`), so the next application is only sent after the previous one finishes:
+Each application call blocks until FreeSWITCH signals completion (`CHANNEL_EXECUTE_COMPLETE`), so applications execute sequentially:
 
 ```ruby
 class MyOutbound < Librevox::Listener::Outbound
   def session_initiated
-    answer do
-      playback "welcome.wav" do
-        play_and_get_digits "enter-digit.wav", "bad-digit.wav" do |digit|
-          bridge "sofia/gateway/trunk/#{digit}"
-        end
-      end
-    end
+    answer
+    digit = play_and_get_digits "enter-digit.wav", "bad-digit.wav"
+    bridge "sofia/gateway/trunk/#{digit}"
   end
 end
 ```
 
-Instant applications like `set` and `multiset` only set channel variables in memory — they complete before the acknowledgement reaches the listener. These can be called without a callback before the next application:
+Applications that read input (like `play_and_get_digits` and `read`) return the collected value directly.
 
 ```ruby
 def session_initiated
-  answer do
-    set "foo", "bar"
-    multiset "baz" => "1", "qux" => "2"
-    playback "welcome.wav" do
-      hangup
-    end
-  end
+  answer
+  set "foo", "bar"
+  multiset "baz" => "1", "qux" => "2"
+  playback "welcome.wav"
+  hangup
 end
 ```
 
@@ -132,10 +126,9 @@ Channel variables are available through `session` (a hash) and `variable`:
 
 ```ruby
 def session_initiated
-  answer do
-    number = variable(:destination_number)
-    playback "greeting-#{number}.wav"
-  end
+  answer
+  number = variable(:destination_number)
+  playback "greeting-#{number}.wav"
 end
 ```
 
@@ -145,11 +138,9 @@ To avoid name clashes between applications and commands, commands are accessed t
 
 ```ruby
 def session_initiated
-  answer do
-    api.status do
-      api.originate 'sofia/user/coltrane', :extension => "1234"
-    end
-  end
+  answer
+  api.status
+  api.originate 'sofia/user/coltrane', :extension => "1234"
 end
 ```
 
@@ -271,18 +262,20 @@ finishes. With `event-lock: true`, FreeSWITCH sets an internal flag
 (`CF_EVENT_LOCK`) on the channel that prevents the next queued sendmsg from
 being processed until the current application completes.
 
-### Application queue and command queue
+### Two fibers per connection
 
-Librevox uses two queues to drive the outbound dialplan:
+Librevox runs two fibers for each outbound connection:
 
-- **`@application_queue`** — procs pushed by each `application()` call, shifted
-  when a `CHANNEL_EXECUTE_COMPLETE` event arrives. The event content carries all
-  channel variables, so `@session` is updated before the user's block runs.
-- **`@reply_queue`** — procs for setup commands (`connect`, `myevents`,
-  `linger`), shifted when a `command/reply` (non-event) arrives.
+- **Session fiber** (`run_session`) — runs the setup sequence and then
+  `session_initiated`. Each `command` or `application` call blocks the fiber
+  until the reply arrives.
+- **Read fiber** (`read_loop`) — reads messages from the socket and dispatches
+  them to `Async::Queue` instances, waking the session fiber.
 
-API commands (`api.command`) have their own callback shifted when an
-`api/response` arrives.
+An `Async::Semaphore(1)` mutex on `command` ensures only one command is
+in-flight at a time, so replies are always delivered to the correct caller.
+This also serializes commands issued by event hooks (which run in their own
+fibers) with the main session flow.
 
 ## API Documentation
 

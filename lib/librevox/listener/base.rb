@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'async/queue'
+require 'async/semaphore'
 require 'librevox/response'
 require 'librevox/commands'
 
@@ -8,7 +10,8 @@ module Librevox
     class Base
       def initialize(connection = nil)
         @connection = connection
-        @command_queue = []
+        @reply_queue = Async::Queue.new
+        @command_mutex = Async::Semaphore.new(1)
       end
 
       class << self
@@ -32,8 +35,8 @@ module Librevox
           @listener = listener
         end
 
-        def command(*args, &block)
-          @listener.command(super(*args), &block)
+        def command(*args)
+          @listener.command(super(*args))
         end
       end
 
@@ -47,10 +50,11 @@ module Librevox
         @command_delegate ||= CommandDelegate.new(self)
       end
 
-      def command(msg, &block)
-        send_data "#{msg}\n\n"
-
-        @command_queue.push(block || proc {})
+      def command(msg)
+        @command_mutex.acquire do
+          send_data "#{msg}\n\n"
+          @reply_queue.dequeue
+        end
       end
 
       attr_accessor :response
@@ -63,7 +67,7 @@ module Librevox
 
       def handle_response
         if response.reply?
-          @command_queue.shift.call(response) if @command_queue.any?
+          @reply_queue.push(response)
           return
         end
 
@@ -88,7 +92,7 @@ module Librevox
         end
       end
 
-      def connection_completed
+      def run_session
       end
 
       def close_connection_after_writing
@@ -100,10 +104,16 @@ module Librevox
       private
 
       def invoke_event_hooks
-        event = response.event.downcase.to_sym
-        self.class.hooks[event].each {|block|
-          instance_exec(response.dup, &block)
-        }
+        event_name = response.event.downcase.to_sym
+        hooks = self.class.hooks[event_name]
+        return if hooks.empty?
+
+        resp = response
+        Async do
+          hooks.each do |block|
+            instance_exec(resp.dup, &block)
+          end
+        end
       end
     end
   end

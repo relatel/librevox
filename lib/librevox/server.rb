@@ -16,10 +16,14 @@ module Librevox
       connection = Protocol::Connection.new(stream)
 
       listener = @handler.new(connection)
+
+      session_task = Async { listener.run_session }
       listener.read_loop
+      session_task.wait
     rescue => e
       Librevox.logger.error "Session error: #{e.message}"
     ensure
+      session_task&.stop
       connection&.close
     end
 

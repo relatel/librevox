@@ -41,18 +41,18 @@ end
 Librevox::Listener::Base.prepend(ListenerTestMock)
 
 module Librevox::Commands
-  def sample_cmd(cmd, *args, &block)
-    command cmd, *args, &block
+  def sample_cmd(cmd, *args)
+    command cmd, *args
   end
 end
 
 module Librevox::Applications
-  def sample_app(name, *args, &block)
-    application name, args.join(" "), &block
+  def sample_app(name, *args)
+    application name, args.join(" ")
   end
 
-  def reader_app(&block)
-    application 'reader_app', "", {:variable => 'app_var'}, &block
+  def reader_app
+    application 'reader_app', "", {:variable => 'app_var'}
   end
 end
 
@@ -138,9 +138,6 @@ module ApiCommandTests
   def setup
     super
     @class = @listener.class
-
-    # Establish session
-    command_reply "Test" => "Testing"
   end
 
   def test_multiple_api_commands
@@ -149,23 +146,24 @@ module ApiCommandTests
     @listener.on_event_block = nil # Don't send anything, kthx.
 
     @class.event(:api_test) {
-      api.sample_cmd "foo" do
-        api.sample_cmd "foo", "bar baz" do |r|
-          command "response #{r.content}"
-        end
-      end
+      api.sample_cmd "foo"
+      api.sample_cmd "foo", "bar baz"
     }
 
     command_reply :body => {"Event-Name" => "API_TEST"}
+    # The event hook fiber runs and issues two commands sequentially.
+    # First command sends immediately:
     assert_send_command @listener, "api foo"
+    # It's waiting for reply, so nothing else yet:
     assert_send_nothing @listener
 
     api_response "Reply-Text" => "+OK"
+    # First command got its reply, second command sends:
     assert_send_command @listener, "api foo bar baz"
     assert_send_nothing @listener
 
     api_response :body => "+YAY"
-    assert_send_command @listener, "response +YAY"
+    assert_send_nothing @listener
   end
 end
 

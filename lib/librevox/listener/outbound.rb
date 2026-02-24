@@ -14,26 +14,23 @@ module Librevox
         Server.new(self, endpoint).run(barrier)
       end
 
-      def application(app, args = nil, params = {}, &block)
+      def application(app, args = nil, params = {})
         parts = ["call-command: execute", "execute-app-name: #{app}"]
         parts << "execute-app-arg: #{args}" if args && !args.empty?
         parts << "event-lock: true"
 
-        sendmsg parts.join("\n") do
-          @session = response.content
+        response = sendmsg parts.join("\n")
+        @session = response.content
 
-          if block
-            arg = params[:variable] ? variable(params[:variable]) : nil
-            block.call(arg)
-          end
-        end
+        params[:variable] ? variable(params[:variable]) : nil
       end
 
-      def sendmsg(msg, &block)
-        send_data "sendmsg\n#{msg}\n\n"
-
-        @command_queue.push(proc {})
-        @application_queue.push(block || proc {})
+      def sendmsg(msg)
+        @command_mutex.acquire do
+          send_data "sendmsg\n#{msg}\n\n"
+          @reply_queue.dequeue          # command/reply ack
+          @app_complete_queue.dequeue   # CHANNEL_EXECUTE_COMPLETE
+        end
       end
 
       attr_accessor :session
@@ -45,18 +42,21 @@ module Librevox
       def initialize(connection = nil)
         super(connection)
         @session = nil
-        @application_queue = []
+        @app_complete_queue = Async::Queue.new
+      end
 
-        command("connect") { @session = response.headers }
+      def run_session
+        @session = command("connect").headers
         command "myevents"
-        command("linger") { session_initiated }
+        command "linger"
+        session_initiated
       end
 
       def handle_response
         if response.event? && response.event == "CHANNEL_DATA"
           @session = response.content
         elsif response.event? && response.event == "CHANNEL_EXECUTE_COMPLETE"
-          @application_queue.shift.call(response) if @application_queue.any?
+          @app_complete_queue.push(response)
         end
 
         super
@@ -66,11 +66,9 @@ module Librevox
         session[:"variable_#{name}"]
       end
 
-      def update_session(&block)
-        api.command "uuid_dump", session[:unique_id] do |response|
-          @session = response.content
-          block.call if block
-        end
+      def update_session
+        response = api.command "uuid_dump", session[:unique_id]
+        @session = response.content
       end
     end
   end
