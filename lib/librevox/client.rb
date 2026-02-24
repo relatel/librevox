@@ -20,7 +20,6 @@ module Librevox
 
       session_task = Async { listener.run_session }
       listener.read_loop
-      session_task.wait
     ensure
       session_task&.stop
       connection.close

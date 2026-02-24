@@ -29,8 +29,8 @@ module Librevox
         @command_mutex.acquire do
           send_data "sendmsg\n#{msg}\n\n"
           @reply_queue.dequeue          # command/reply ack
-          @app_complete_queue.dequeue   # CHANNEL_EXECUTE_COMPLETE
         end
+        @app_complete_queue.dequeue     # CHANNEL_EXECUTE_COMPLETE
       end
 
       attr_accessor :session
