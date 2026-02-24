@@ -45,6 +45,7 @@ module Librevox
         end
 
         connection_completed
+        sleep # keep session alive for event hooks and child tasks
       end
 
       def connection_completed

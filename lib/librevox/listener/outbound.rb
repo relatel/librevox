@@ -50,6 +50,7 @@ module Librevox
         command "myevents"
         command "linger"
         session_initiated
+        sleep # keep session alive for event hooks and child tasks
       end
 
       def handle_response
