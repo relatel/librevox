@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'io/endpoint/host_endpoint'
 require 'librevox/listener/base'
 require 'librevox/applications'
 require 'librevox/server'
@@ -9,9 +10,10 @@ module Librevox
     class Outbound < Base
       include Librevox::Applications
 
-      def self.start(barrier, host: "localhost", port: 8084)
-        endpoint = IO::Endpoint.tcp(host, port)
-        Server.new(self, endpoint).run(barrier)
+      def self.run(barrier, host: "localhost", port: 8084, **options)
+        endpoint = IO::Endpoint.tcp(host, port, **options)
+        server = Server.new(self, endpoint)
+        barrier.async { server.run }
       end
 
       def application(app, args = nil, params = {})

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'io/stream'
 require 'librevox/protocol/connection'
 
 module Librevox
@@ -25,16 +26,14 @@ module Librevox
       connection.close
     end
 
-    def run(barrier)
-      barrier.async do
-        loop do
-          @endpoint.connect do |socket|
-            connect(socket)
-          end
-        rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET => e
-          Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
-          sleep 1
+    def run
+      loop do
+        @endpoint.connect do |socket|
+          connect(socket)
         end
+      rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET => e
+        Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
+        sleep 1
       end
     end
   end

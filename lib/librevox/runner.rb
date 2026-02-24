@@ -7,7 +7,7 @@ module Librevox
     end
 
     def run(klass, **args)
-      klass.start(@barrier, **args)
+      klass.run(@barrier, **args)
     end
   end
 end

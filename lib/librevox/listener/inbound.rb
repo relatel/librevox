@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'io/endpoint/host_endpoint'
 require 'librevox/listener/base'
 require 'librevox/client'
 
@@ -19,9 +20,10 @@ module Librevox
         end
       end
 
-      def self.start(barrier, host: "localhost", port: 8021, **options)
+      def self.run(barrier, host: "localhost", port: 8021, **options)
         endpoint = IO::Endpoint.tcp(host, port)
-        Client.new(self, endpoint, **options).run(barrier)
+        client = Client.new(self, endpoint, **options)
+        barrier.async { client.run }
       end
 
       def initialize(connection = nil, args = {})
