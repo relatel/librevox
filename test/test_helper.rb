@@ -4,6 +4,8 @@ require 'minitest/autorun'
 require 'async'
 require 'librevox'
 
+Librevox.logger.level = Logger::WARN
+
 module Librevox::Test
   module Matchers
     def assert_send_command(obj, command)
@@ -100,3 +102,5 @@ module Librevox::Test
     end
   end
 end
+
+require_relative 'support/listener'

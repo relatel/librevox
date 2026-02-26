@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'uri'
+
 module Librevox
   class Response
     attr_reader :headers, :content
@@ -16,7 +18,7 @@ module Librevox
 
     def content=(content)
       @content = if content.respond_to?(:match) && content.match(/:/)
-                   headers_2_hash(content).merge(:body => content.split("\n\n", 2)[1].to_s)
+                   headers_2_hash(content, decode: true).merge(:body => content.split("\n\n", 2)[1].to_s)
                  else
                    content
                  end
@@ -48,12 +50,14 @@ module Librevox
 
     private
 
-    def headers_2_hash(header_string)
+    def headers_2_hash(header_string, decode: false)
       return header_string if header_string.is_a?(Hash)
       hash = {}
       header_string.each_line do |line|
         if line =~ /\A([^\s:]+)\s*:\s*(.*?)\s*\z/
-          hash[$1.downcase.tr('-', '_').to_sym] = $2
+          value = $2
+          value = URI::RFC2396_PARSER.unescape(value) if decode
+          hash[$1.downcase.tr('-', '_').to_sym] = value
         end
       end
       hash

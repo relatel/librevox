@@ -72,8 +72,11 @@ module Librevox
         end
 
         if response.event?
-          on_event(response.dup)
-          invoke_event_hooks
+          resp = response.dup
+          Async do
+            on_event(resp)
+            invoke_event_hooks(resp)
+          end
         end
       end
 
@@ -103,16 +106,12 @@ module Librevox
 
       private
 
-      def invoke_event_hooks
-        event_name = response.event.downcase.to_sym
+      def invoke_event_hooks(resp)
+        event_name = resp.event.downcase.to_sym
         hooks = self.class.hooks[event_name]
-        return if hooks.empty?
 
-        resp = response
-        Async do
-          hooks.each do |block|
-            instance_exec(resp.dup, &block)
-          end
+        hooks.each do |block|
+          instance_exec(resp, &block)
         end
       end
     end

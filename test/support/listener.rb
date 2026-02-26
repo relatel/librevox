@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require_relative '../test_helper'
 require 'librevox/listener/base'
 
 class MockConnection
@@ -56,8 +55,8 @@ module Librevox::Applications
   end
 end
 
-# These tests are a bit fragile, as they depend on event hooks being
-# executed before on_event.
+# These tests are a bit fragile, as they depend on on_event being
+# executed before event hooks.
 module EventTests
   include Librevox::Test::ListenerHelpers
 
