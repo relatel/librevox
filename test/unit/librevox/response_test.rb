@@ -29,14 +29,8 @@ class TestResponse < Minitest::Test
     assert_equal "OK.", response.content
   end
 
-  def test_allow_setting_content_from_a_hash
-    response = Librevox::Response.new
-    response.content = {:key => 'value'}
-    assert_equal({:key => 'value'}, response.content)
-  end
-
   def test_check_for_event
-    response = Librevox::Response.new("Content-Type: command/reply", "Event-Name: Hangup")
+    response = Librevox::Response.new("Content-Type: text/event-plain", "Event-Name: Hangup")
     assert response.event?
     assert_equal "Hangup", response.event
 
@@ -65,19 +59,24 @@ class TestResponse < Minitest::Test
     assert_equal "Message body", response.content[:body]
   end
 
-  def test_url_decode_content_values
-    response = Librevox::Response.new("", "Channel-Name: sofia%2Finternal%2F1000%40example.com")
+  def test_url_decode_event_content_values
+    response = Librevox::Response.new("Content-Type: text/event-plain", "Channel-Name: sofia%2Finternal%2F1000%40example.com")
     assert_equal "sofia/internal/1000@example.com", response.content[:channel_name]
   end
 
   def test_url_decode_plus_in_phone_number
-    response = Librevox::Response.new("", "Caller-Caller-ID-Number: %2B4512345678")
+    response = Librevox::Response.new("Content-Type: text/event-plain", "Caller-Caller-ID-Number: %2B4512345678")
     assert_equal "+4512345678", response.content[:caller_caller_id_number]
   end
 
   def test_url_decode_preserves_literal_plus
-    response = Librevox::Response.new("", "Some-Header: hello+world")
+    response = Librevox::Response.new("Content-Type: text/event-plain", "Some-Header: hello+world")
     assert_equal "hello+world", response.content[:some_header]
+  end
+
+  def test_does_not_url_decode_non_event_content
+    response = Librevox::Response.new("Content-Type: command/reply", "Reply-Text: %2BOK")
+    assert_equal "%2BOK", response.content[:reply_text]
   end
 
   def test_does_not_url_decode_headers

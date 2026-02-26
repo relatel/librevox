@@ -7,26 +7,12 @@ module Librevox
     attr_reader :headers, :content
 
     def initialize(headers = "", content = "")
-      self.headers = headers
-      self.content = content
-    end
-
-    def headers=(headers)
-      @headers = headers_2_hash(headers)
-      @headers.transform_values! {|v| v.is_a?(String) ? v.chomp : v}
-    end
-
-    def content=(content)
-      @content = if content.respond_to?(:match) && content.match(/:/)
-                   headers_2_hash(content, decode: true).merge(:body => content.split("\n\n", 2)[1].to_s)
-                 else
-                   content
-                 end
-      @content.transform_values! {|v| v.is_a?(String) ? v.chomp : v} if @content.is_a?(Hash)
+      @headers = parse_headers(headers)
+      @content = parse_content(content)
     end
 
     def event?
-      @content.is_a?(Hash) && @content.include?(:event_name)
+      @headers[:content_type] == "text/event-plain"
     end
 
     def event
@@ -42,23 +28,29 @@ module Librevox
     end
 
     def reply?
-      return true if api_response?
-      return false if event?
-
-      command_reply?
+      api_response? || command_reply?
     end
 
     private
 
-    def headers_2_hash(header_string, decode: false)
-      return header_string if header_string.is_a?(Hash)
+    def parse_headers(headers)
+      parse_kv(headers)
+    end
+
+    def parse_content(content)
+      return content unless content.include?(":")
+
+      headers, body = content.split("\n\n", 2)
+      parse_kv(headers, decode: event?).merge(body: body || "")
+    end
+
+    def parse_kv(string, decode: false)
       hash = {}
-      header_string.each_line do |line|
-        if line =~ /\A([^\s:]+)\s*:\s*(.*?)\s*\z/
-          value = $2
-          value = URI::RFC2396_PARSER.unescape(value) if decode
-          hash[$1.downcase.tr('-', '_').to_sym] = value
-        end
+      string.each_line do |line|
+        name, value = line.split(':', 2)
+        next unless value
+        value = URI::RFC2396_PARSER.unescape(value) if decode
+        hash[name.downcase.tr('-', '_').to_sym] = value.strip
       end
       hash
     end

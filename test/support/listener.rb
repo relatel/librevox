@@ -149,7 +149,7 @@ module ApiCommandTests
       api.sample_cmd "foo", "bar baz"
     }
 
-    command_reply :body => {"Event-Name" => "API_TEST"}
+    event "API_TEST"
     # The event hook fiber runs and issues two commands sequentially.
     # First command sends immediately:
     assert_send_command @listener, "api foo"

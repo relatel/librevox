@@ -68,7 +68,7 @@ module Librevox::Test
 
     def event(name)
       body    = "Event-Name: #{name}"
-      headers = "Content-Length: #{body.size}"
+      headers = "Content-Type: text/event-plain\nContent-Length: #{body.size}"
 
       @listener.receive_message(headers, body)
       yield_to_fibers
@@ -80,7 +80,7 @@ module Librevox::Test
 
       body = {"Event-Name" => "CHANNEL_EXECUTE_COMPLETE"}.merge(args)
       body_str = body.map {|k,v| "#{k}: #{v}"}.join("\n")
-      headers = "Content-Length: #{body_str.size}"
+      headers = "Content-Type: text/event-plain\nContent-Length: #{body_str.size}"
 
       @listener.receive_message(headers, body_str)
       yield_to_fibers
