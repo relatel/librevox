@@ -62,11 +62,8 @@ module Librevox
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bridge
     def bridge(*args)
       variables = if args.last.is_a? Hash
-                    # We need to sort the key/value pairs to facilitate testing.
-                    # This can be removed once 1.8-compat is dropped.
-                    key_value_pairs = args.pop.sort {|x,y| x.to_s <=> y.to_s}
-                    key_value_pairs.map! {|k,v| "#{k}=#{v}"}
-                    "{#{key_value_pairs.join(",")}}"
+                    pairs = args.pop.map {|k,v| "#{k}=#{v}"}
+                    "{#{pairs.join(",")}}"
                   else
                     ""
                   end
@@ -106,7 +103,7 @@ module Librevox
     #   export "some_var", :local => false
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_export
     def export(var, args = {})
-      nolocal = args[:local] == false ? "nolocal:" : "" # ugly!!111
+      nolocal = args[:local] == false ? "nolocal:" : ""
 
       application "export", "#{nolocal}#{var}"
     end

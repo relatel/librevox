@@ -2,8 +2,6 @@
 
 require 'async/queue'
 require 'async/semaphore'
-require 'librevox/response'
-require 'librevox/commands'
 
 module Librevox
   module Listener
@@ -60,8 +58,8 @@ module Librevox
       attr_accessor :response
       alias :event :response
 
-      def receive_message(header, content)
-        @response = Librevox::Response.new(header, content)
+      def receive_message(response)
+        @response = response
         handle_response
       end
 
@@ -89,9 +87,8 @@ module Librevox
       end
 
       def read_loop
-        while msg = @connection.read_message
-          @response = msg
-          handle_response
+        while (msg = @connection.read_message)
+          receive_message(msg)
         end
       end
 

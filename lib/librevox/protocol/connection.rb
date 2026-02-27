@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'librevox/response'
-
 module Librevox
   module Protocol
     class Connection
@@ -22,7 +20,7 @@ module Librevox
             content = ""
           end
 
-          return Librevox::Response.new(headers, content)
+          return Librevox::Protocol::Response.new(headers, content)
         end
       end
 

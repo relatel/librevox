@@ -72,7 +72,7 @@ module EventTests
     @listener.on_event_block = proc {|e| send_data "from on_event: #{e.event}"}
 
     # Establish session
-    @listener.receive_message("Content-Length: 0\nTest: Testing", "")
+    @listener.receive_message(Librevox::Protocol::Response.new("Content-Length: 0\nTest: Testing", ""))
   end
 
   def test_add_event_hook
@@ -99,7 +99,7 @@ module EventTests
   def test_expose_response_as_event
     event "OTHER_EVENT"
 
-    assert_equal Librevox::Response, @listener.event.class
+    assert_equal Librevox::Protocol::Response, @listener.event.class
     assert_equal "OTHER_EVENT", @listener.event.content[:event_name]
   end
 

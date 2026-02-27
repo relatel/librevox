@@ -66,7 +66,7 @@ module Librevox
       command "uuid_park", uuid
     end
 
-    # Bridge two call legs together. At least one leg must be anwered.
+    # Bridge two call legs together. At least one leg must be answered.
     # @example
     #   socket.uuid_bridge "592567a2-1be4-11df-a036-19bfdab2092f", "58b39c3a-1be4-11df-a035-19bfdab2092f"
     # @see http://wiki.freeswitch.org/wiki/Mod_commands#uuid_bridge

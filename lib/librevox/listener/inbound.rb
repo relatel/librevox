@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 require 'io/endpoint/host_endpoint'
-require 'librevox/listener/base'
-require 'librevox/client'
 
 module Librevox
   module Listener

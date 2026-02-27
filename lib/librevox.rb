@@ -2,14 +2,26 @@
 
 require 'logger'
 require 'librevox/version'
-require 'librevox/listener/inbound'
-require 'librevox/listener/outbound'
-require 'librevox/server'
-require 'librevox/client'
-require 'librevox/runner'
-require 'librevox/command_socket'
 
 module Librevox
+  autoload :Client, 'librevox/client'
+  autoload :CommandSocket, 'librevox/command_socket'
+  autoload :Commands, 'librevox/commands'
+  autoload :Applications, 'librevox/applications'
+  autoload :Runner, 'librevox/runner'
+  autoload :Server, 'librevox/server'
+
+  module Protocol
+    autoload :Connection, 'librevox/protocol/connection'
+    autoload :Response, 'librevox/protocol/response'
+  end
+
+  module Listener
+    autoload :Base, 'librevox/listener/base'
+    autoload :Inbound, 'librevox/listener/inbound'
+    autoload :Outbound, 'librevox/listener/outbound'
+  end
+
   def self.options
     @options ||= {
       log_file: STDOUT,

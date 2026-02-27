@@ -21,7 +21,7 @@ class ProtocolConnectionTest < Minitest::Test
     @write_io.close
 
     msg = @connection.read_message
-    assert_instance_of Librevox::Response, msg
+    assert_instance_of Librevox::Protocol::Response, msg
     assert_equal "command/reply", msg.headers[:content_type]
     assert_equal "+OK", msg.headers[:reply_text]
   end
@@ -32,7 +32,7 @@ class ProtocolConnectionTest < Minitest::Test
     @write_io.close
 
     msg = @connection.read_message
-    assert_instance_of Librevox::Response, msg
+    assert_instance_of Librevox::Protocol::Response, msg
     assert_equal body.size.to_s, msg.headers[:content_length]
     assert_equal "HEARTBEAT", msg.content[:event_name]
   end

@@ -2,10 +2,6 @@
 
 require 'socket'
 require 'io/stream'
-require 'librevox/response'
-require 'librevox/commands'
-require 'librevox/applications'
-require 'librevox/protocol/connection'
 
 module Librevox
   class CommandSocket

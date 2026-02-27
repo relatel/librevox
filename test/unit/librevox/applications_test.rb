@@ -63,7 +63,6 @@ class TestApplications < Minitest::Test
     app = AppTest.bridge('user/coltrane', 'user/davis', :foo => 'bar', :lol => 'cat')
     assert_equal "bridge", app[:name]
 
-    # fragile. hashes are not ordered in ruby 1.8
     assert_equal "{foo=bar,lol=cat}user/coltrane,user/davis", app[:args]
   end
 
