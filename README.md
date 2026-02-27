@@ -140,7 +140,7 @@ To avoid name clashes between applications and commands, commands are accessed t
 def session_initiated
   answer
   api.status
-  api.originate 'sofia/user/coltrane', :extension => "1234"
+  api.originate 'sofia/user/coltrane', extension: "1234"
 end
 ```
 
@@ -190,11 +190,11 @@ require "librevox/command_socket"
 
 socket = Librevox::CommandSocket.new(server: "127.0.0.1", port: 8021, auth: "ClueCon")
 
-socket.originate 'sofia/user/coltrane', :extension => "1234"
-#=> #<Librevox::Response ...>
+socket.originate 'sofia/user/coltrane', extension: "1234"
+#=> #<Librevox::Protocol::Response ...>
 
 socket.status
-#=> #<Librevox::Response ...>
+#=> #<Librevox::Protocol::Response ...>
 
 socket.close
 ```
