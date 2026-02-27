@@ -58,28 +58,6 @@ module Librevox
   #     run MyInbound
   #     run MyOutbound, port: 8084
   #   end
-  def self.start(klass = nil, **args, &block)
-    require 'async'
-    require 'async/barrier'
-
-    logger.info "Starting Librevox"
-
-    Async do
-      barrier = Async::Barrier.new
-      begin
-        runner = Runner.new(barrier)
-        if block_given?
-          runner.instance_eval(&block)
-        else
-          runner.run(klass, **args)
-        end
-        barrier.wait
-      ensure
-        barrier.stop
-      end
-    end
-  rescue Interrupt, SignalException
-    logger.info "Terminating Librevox"
-  end
+  def self.start(...) = Runner.start(...)
 
 end
