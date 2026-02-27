@@ -31,7 +31,7 @@ module Librevox
 
     # Originate a new call.
     # @example Minimum options
-    #   socket.originate 'sofia/user/coltrane', :extension => "1234"
+    #   socket.originate 'sofia/user/coltrane', extension: "1234"
     # @example With :dialplan and :context
     # @see http://wiki.freeswitch.org/wiki/Mod_commands#originate
     def originate(url, args = {})

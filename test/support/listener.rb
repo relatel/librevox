@@ -51,7 +51,7 @@ module Librevox::Applications
   end
 
   def reader_app
-    application 'reader_app', "", {:variable => 'app_var'}
+    application 'reader_app', "", {variable: 'app_var'}
   end
 end
 
@@ -153,7 +153,7 @@ module ApiCommandTests
     assert_send_command @listener, "api foo bar baz"
     assert_send_nothing @listener
 
-    api_response :body => "+YAY"
+    api_response body: "+YAY"
     assert_send_nothing @listener
   end
 end

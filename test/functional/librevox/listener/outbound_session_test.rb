@@ -25,7 +25,7 @@ class TestOutboundListenerWithUpdateSessionCallback < Minitest::Test
     3.times {@listener.outgoing_data.shift}
 
     assert_update_session @listener
-    api_response :body => {
+    api_response body: {
       "Event-Name"  => "CHANNEL_DATA",
       "Session-Var" => "Second"
     }

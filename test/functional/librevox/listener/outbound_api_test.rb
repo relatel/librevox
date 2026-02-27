@@ -37,7 +37,7 @@ class TestOutboundListenerWithAppsAndApi < Minitest::Test
     execute_complete
 
     assert_send_command @listener, "api bar"
-    api_response :body => "+OK"
+    api_response body: "+OK"
 
     assert_send_application @listener, "baz"
   end

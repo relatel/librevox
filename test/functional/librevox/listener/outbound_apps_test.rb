@@ -44,7 +44,7 @@ class TestOutboundListenerWithApps < Minitest::Test
   def test_not_be_driven_forward_by_events
     assert_send_application @listener, "foo"
 
-    command_reply :body => {
+    command_reply body: {
       "Event-Name"  => "CHANNEL_EXECUTE",
       "Session-Var" => "Some"
     }
@@ -55,7 +55,7 @@ class TestOutboundListenerWithApps < Minitest::Test
   def test_not_be_driven_forward_by_api_responses
     assert_send_application @listener, "foo"
 
-    api_response :body => "Foo"
+    api_response body: "Foo"
 
     assert_send_nothing @listener
   end
@@ -64,7 +64,7 @@ class TestOutboundListenerWithApps < Minitest::Test
     assert_send_application @listener, "foo"
 
     response "Content-Type" => "text/disconnect-notice",
-             :body          => "Lingering"
+             body: "Lingering"
 
     assert_send_nothing @listener
   end

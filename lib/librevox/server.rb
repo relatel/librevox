@@ -20,7 +20,7 @@ module Librevox
       session_task = Async { listener.run_session }
       listener.read_loop
     rescue => e
-      Librevox.logger.error "Session error: #{e.message}"
+      Librevox.logger.error "Session error: #{e.full_message}"
     ensure
       session_task&.stop
       connection&.close

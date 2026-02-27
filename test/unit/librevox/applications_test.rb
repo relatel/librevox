@@ -10,9 +10,9 @@ module AppTest
 
   def application(name, args = "", params = {})
     {
-      :name   => name,
-      :args   => args,
-      :params => params
+      name: name,
+      args: args,
+      params: params
     }
   end
 end
@@ -30,21 +30,21 @@ class TestApplications < Minitest::Test
   end
 
   def test_bind_meta_app
-    app = AppTest.bind_meta_app :key => "2",
-                          :listen_to => :a,
-                          :respond_on => :s,
-                          :application => "hangup"
+    app = AppTest.bind_meta_app key: "2",
+                          listen_to: :a,
+                          respond_on: :s,
+                          application: "hangup"
 
     assert_equal "bind_meta_app", app[:name]
     assert_equal "2 a s hangup", app[:args]
   end
 
   def test_bind_meta_app_with_parameters
-    app = AppTest.bind_meta_app :key => "2",
-                          :listen_to => :a,
-                          :respond_on => :s,
-                          :application => "execute_extension",
-                          :parameters => "dx XML features"
+    app = AppTest.bind_meta_app key: "2",
+                          listen_to: :a,
+                          respond_on: :s,
+                          application: "execute_extension",
+                          parameters: "dx XML features"
 
     assert_equal "bind_meta_app", app[:name]
     assert_equal "2 a s execute_extension::dx XML features", app[:args]
@@ -60,7 +60,7 @@ class TestApplications < Minitest::Test
   end
 
   def test_bridge_with_variables
-    app = AppTest.bridge('user/coltrane', 'user/davis', :foo => 'bar', :lol => 'cat')
+    app = AppTest.bridge('user/coltrane', 'user/davis', foo: 'bar', lol: 'cat')
     assert_equal "bridge", app[:name]
 
     assert_equal "{foo=bar,lol=cat}user/coltrane,user/davis", app[:args]
@@ -88,7 +88,7 @@ class TestApplications < Minitest::Test
   end
 
   def test_export_only_b_leg
-    app = AppTest.export 'some_var', :local => false
+    app = AppTest.export 'some_var', local: false
     assert_equal "export", app[:name]
     assert_equal "nolocal:some_var", app[:args]
   end
@@ -116,13 +116,13 @@ class TestApplications < Minitest::Test
 
   def test_play_and_get_digits_with_params
     app = AppTest.play_and_get_digits "please-enter", "invalid-choice",
-      :min          => 2,
-      :max          => 3,
-      :tries        => 4,
-      :terminators  => "0",
-      :timeout      => 10000,
-      :variable     => "other_var",
-      :regexp       => "[125]"
+      min: 2,
+      max: 3,
+      tries: 4,
+      terminators: "0",
+      timeout: 10000,
+      variable: "other_var",
+      regexp: "[125]"
 
     assert_equal "2 3 4 10000 0 please-enter invalid-choice other_var [125]", app[:args]
     assert_equal "other_var", app[:params][:variable]
@@ -148,11 +148,11 @@ class TestApplications < Minitest::Test
 
   def test_read_with_params
     app = AppTest.read "please-enter.wav",
-      :min          => 2,
-      :max          => 3,
-      :terminators  => "0",
-      :timeout      => 10000,
-      :variable     => "other_var"
+      min: 2,
+      max: 3,
+      terminators: "0",
+      timeout: 10000,
+      variable: "other_var"
 
     assert_equal "2 3 please-enter.wav other_var 10000 0", app[:args]
     assert_equal "other_var", app[:params][:variable]
@@ -165,7 +165,7 @@ class TestApplications < Minitest::Test
   end
 
   def test_record_with_time_limit
-    app = AppTest.record "/path/to/file.mp3", :limit => 15
+    app = AppTest.record "/path/to/file.mp3", limit: 15
     assert_equal "record", app[:name]
     assert_equal "/path/to/file.mp3 15", app[:args]
   end

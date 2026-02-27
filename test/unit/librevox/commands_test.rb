@@ -10,8 +10,8 @@ module CommandTest
 
   def command(name, args = "")
     {
-      :name => name,
-      :args => args
+      name: name,
+      args: args
     }
   end
 end
@@ -25,16 +25,16 @@ class TestCommands < Minitest::Test
   end
 
   def test_originate_url_to_extension
-    cmd = C.originate "user/coltrane", :extension => 4000
+    cmd = C.originate "user/coltrane", extension: 4000
     assert_equal "originate", cmd[:name]
     assert_equal "{}user/coltrane 4000", cmd[:args]
   end
 
   def test_originate_send_variables
     cmd = C.originate 'user/coltrane',
-                      :extension => 1234,
-                      :ignore_early_media => true,
-                      :other_option => "value"
+                      extension: 1234,
+                      ignore_early_media: true,
+                      other_option: "value"
 
     assert_match %r|^\{\S+\}user/coltrane 1234$|, cmd[:args]
     assert_match(/ignore_early_media=true/, cmd[:args])
@@ -43,9 +43,9 @@ class TestCommands < Minitest::Test
 
   def test_originate_take_dialplan_and_context
     cmd = C.originate "user/coltrane",
-                      :extension => "4000",
-                      :dialplan => "XML",
-                      :context => "public"
+                      extension: "4000",
+                      dialplan: "XML",
+                      context: "public"
     assert_equal "originate", cmd[:name]
     assert_equal "{}user/coltrane 4000 XML public", cmd[:args]
   end

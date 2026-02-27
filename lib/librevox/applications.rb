@@ -31,11 +31,11 @@ module Librevox
 
     # Binds an application to the specified call legs.
     # @example
-    #   bind_meta_app :key          => 2,
-    #                 :listen_to    => "a",
-    #                 :respond_on   => "s",
-    #                 :application  => "execute_extension",
-    #                 :parameters   => "dx XML features"
+    #   bind_meta_app key: 2,
+    #                 listen_to: "a",
+    #                 respond_on: "s",
+    #                 application: "execute_extension",
+    #                 parameters: "dx XML features"
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bind_meta_app
     def bind_meta_app(args = {})
       arg_string =
@@ -54,7 +54,7 @@ module Librevox
     #   bridge "user/coltrane", "user/backup-office"
     #   #=> user/coltrane,user/backup-office
     # @example With channel variables
-    #   bridge "user/coltrane", "user/backup-office", :some_var => "value"
+    #   bridge "user/coltrane", "user/backup-office", some_var: "value"
     #   #=> {some_var=value}user/coltrane,user/backup-office
     # @example With failover
     #   bridge ['user/coltrane', 'user/davis'], ['user/sun-ra', 'user/taylor']
@@ -95,12 +95,12 @@ module Librevox
     # their values will be replicated in any new channels created from the one
     # export was called.
     #
-    # Set :local => false if the variable should only be exported to the B-leg.
+    # Set `local: false` if the variable should only be exported to the B-leg.
     #
     # @example
     #   export "some_var"
     # @example Only export to B-leg
-    #   export "some_var", :local => false
+    #   export "some_var", local: false
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_export
     def export(var, args = {})
       nolocal = args[:local] == false ? "nolocal:" : ""
@@ -131,12 +131,12 @@ module Librevox
     # Plays a sound file and reads DTMF presses.
     # @example
     #   play_and_get_digits "please-enter.wav", "wrong-choice.wav",
-    #     :min          => 1,
-    #     :max          => 2,
-    #     :tries        => 3,
-    #     :terminators  => "#",
-    #     :timeout      => 5000,
-    #     :regexp       => '\d+'
+    #     min: 1,
+    #     max: 2,
+    #     tries: 3,
+    #     terminators: "#",
+    #     timeout: 5000,
+    #     regexp: '\d+'
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_play_and_get_digits
     def play_and_get_digits(file, invalid_file, args = {})
       min         = args[:min]          || 1
@@ -150,7 +150,7 @@ module Librevox
       args = [min, max, tries, timeout, terminators, file, invalid_file,
         variable, regexp].join " "
 
-      params = {:variable => variable}
+      params = {variable: variable}
 
       application "play_and_get_digits", args, params
     end
@@ -182,7 +182,7 @@ module Librevox
       arg_string = "%s %s %s %s %s %s" % [min, max, file, variable, timeout,
         terminators]
 
-      params = {:variable => variable}
+      params = {variable: variable}
 
       application "read", arg_string, params
     end
@@ -192,7 +192,7 @@ module Librevox
     # @example Without limit
     #   record "/path/to/new/file.wac"
     # @example With 20 second limit
-    #   record "/path/to/new/file.wac", :limit => 20
+    #   record "/path/to/new/file.wac", limit: 20
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_record
     def record(path, params = {})
       args = [path, params[:limit]].compact.join(" ")
