@@ -1,0 +1,168 @@
+# frozen_string_literal: true
+
+require 'librevox/listener/base'
+
+class MockConnection
+  attr_reader :data
+
+  def initialize
+    @data = []
+  end
+
+  def write(data)
+    @data << data
+  end
+
+  def read_message
+    nil
+  end
+
+  def close
+  end
+end
+
+module ListenerTestMock
+  attr_accessor :on_event_block
+
+  def outgoing_data
+    @connection.data
+  end
+
+  def read_data
+    @connection.data.pop
+  end
+
+  def on_event(e)
+    instance_exec(e, &@on_event_block) if @on_event_block
+  end
+end
+
+Librevox::Listener::Base.prepend(ListenerTestMock)
+
+module Librevox::Commands
+  def sample_cmd(cmd, *args)
+    command cmd, *args
+  end
+end
+
+module Librevox::Applications
+  def sample_app(name, *args)
+    application name, args.join(" ")
+  end
+
+  def reader_app
+    application 'reader_app', "", {variable: 'app_var'}
+  end
+end
+
+# These tests are a bit fragile, as they depend on on_event being
+# executed before event hooks.
+module EventTests
+  include Librevox::Test::ListenerHelpers
+
+  def setup
+    super
+    @class = @listener.class
+    @class.hooks.clear
+
+    @class.event(:some_event) {send_data "something"}
+    @class.event(:other_event) {send_data "something else"}
+    @class.event(:hook_with_arg) {|e| send_data "got event: #{e.event}"}
+
+    @listener.on_event_block = proc {|e| send_data "from on_event: #{e.event}"}
+
+    # Establish session
+    @listener.receive_message(Librevox::Protocol::Response.new("Content-Length: 0\nTest: Testing", ""))
+  end
+
+  def test_add_event_hook
+    assert_equal 3, @class.hooks.size
+    @class.hooks.each do |event, hooks|
+      assert_equal 1, hooks.size
+    end
+  end
+
+  def test_execute_callback_for_event
+    event "OTHER_EVENT"
+    assert_equal "something else", @listener.read_data
+
+    event "SOME_EVENT"
+    assert_equal "something", @listener.read_data
+  end
+
+  def test_pass_event_as_arg_to_hook_block
+    event "HOOK_WITH_ARG"
+
+    assert_equal "got event: HOOK_WITH_ARG", @listener.read_data
+  end
+
+  def test_expose_response
+    event "OTHER_EVENT"
+
+    assert_equal Librevox::Protocol::Response, @listener.response.class
+    assert_equal "OTHER_EVENT", @listener.response.content[:event_name]
+  end
+
+  def test_call_on_event
+    event "THIRD_EVENT"
+
+    assert_equal "from on_event: THIRD_EVENT", @listener.read_data
+  end
+
+  def test_call_event_hooks_and_on_event_on_channel_data
+    @listener.outgoing_data.clear
+
+    @listener.on_event_block = proc {|e| send_data "on_event: CHANNEL_DATA test"}
+    @class.event(:channel_data) {send_data "event hook: CHANNEL_DATA test"}
+
+    event "CHANNEL_DATA"
+
+    assert_includes @listener.outgoing_data, "on_event: CHANNEL_DATA test"
+    assert_includes @listener.outgoing_data, "event hook: CHANNEL_DATA test"
+  end
+end
+
+module ApiCommandTests
+  include Librevox::Test::ListenerHelpers
+  include Librevox::Test::Matchers
+
+  def setup
+    super
+    @class = @listener.class
+  end
+
+  def test_multiple_api_commands
+    @listener.outgoing_data.clear
+
+    @listener.on_event_block = nil # Don't send anything, kthx.
+
+    @class.event(:api_test) {
+      api.sample_cmd "foo"
+      api.sample_cmd "foo", "bar baz"
+    }
+
+    event "API_TEST"
+    # The event hook fiber runs and issues two commands sequentially.
+    # First command sends immediately:
+    assert_send_command @listener, "api foo"
+    # It's waiting for reply, so nothing else yet:
+    assert_send_nothing @listener
+
+    api_response "Reply-Text" => "+OK"
+    # First command got its reply, second command sends:
+    assert_send_command @listener, "api foo bar baz"
+    assert_send_nothing @listener
+
+    api_response body: "+YAY"
+    assert_send_nothing @listener
+  end
+end
+
+module OutboundSetupHelpers
+  include Librevox::Test::ListenerHelpers
+
+  def event_and_linger_replies
+    command_reply "Reply-Text" => "+OK Events Enabled"
+    command_reply "Reply-Text" => "+OK will linger"
+  end
+end

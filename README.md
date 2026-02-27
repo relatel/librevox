@@ -1,233 +1,292 @@
 # Librevox
 
-> An EventMachine-based Ruby library for interacting with the open source 
-> telephony platform [FreeSWITCH](http://www.freeswitch.org).
+A Ruby library for interacting with [FreeSWITCH](http://www.freeswitch.org) through [mod_event_socket](https://developer.signalwire.com/freeswitch/FreeSWITCH-Explained/Modules/mod_event_socket_1048924/), using async I/O.
 
-Librevox eventually came to life during a major rewrite of
-[Freeswitcher](http://code.rubyists.com/projects/fs/). Not everything would
-fit into the existing architecture, and I felt that a blank slate was needed.
-Librevox and Freeswitcher looks much alike on the outside, but Librevox tries
-to take a simpler approach on the inside.
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Inbound Listener](#inbound-listener)
+  - [Events](#events)
+  - [Event Filtering](#event-filtering)
+- [Outbound Listener](#outbound-listener)
+  - [Dialplan](#dialplan)
+  - [API Commands](#api-commands)
+- [Starting Listeners](#starting-listeners)
+- [Closing Connections](#closing-connections)
+- [Command Socket](#command-socket)
+- [Configuration](#configuration)
+- [Event Socket Protocol](#event-socket-protocol)
+  - [Outbound session lifecycle](#outbound-session-lifecycle)
+  - [sendmsg and application execution](#sendmsg-and-application-execution)
+  - [event-lock](#event-lock)
+  - [Two fibers per connection](#two-fibers-per-connection)
+- [API Documentation](#api-documentation)
+- [License](#license)
 
 ## Prerequisites
 
-Librevox lets you interact with FreeSWITCH through mod_event_socket. You
-should know how the event socket works, and the differences between inbound and
-outbound event sockets before proceeding. The
-[wiki page on mod_event_socket](http://wiki.freeswitch.org/wiki/Event_Socket) is
-a good place to start.
+You should be familiar with [mod_event_socket](https://developer.signalwire.com/freeswitch/FreeSWITCH-Explained/Modules/mod_event_socket_1048924/) and the differences between inbound and outbound event sockets before getting started.
 
-Librevox is Ruby 1.9-only.
+Requires Ruby 3.0+.
 
-## Inbound listener
+## Installation
 
-To create an inbound listener, you should subclass `Librevox::Listener::Inbound`
-and add custom behaviour to it. An inbound listener subscribes to all events
-from FreeSWITCH, and lets you react on events in two different ways:
-
-1. By overiding `on_event` which gets called every time an event arrives.
-
-2. By adding an event hook with `event`, which will get called every time
-   an event with the specified name arrives.
-
-The header and content of the event is accessible through `event`.
-
-Below is an example of an inbound listener utilising all the aforementioned
-techniques:
+Add to your Gemfile:
 
 ```ruby
-require 'librevox'
-
-class MyInbound < Librevox::Listener::Inbound
-  # Events to listen for (default is ALL)
-  events ['CHANNEL_EXECUTE', 'CUSTOM foo']
-
-  # Filters to apply (optional)
-  filter 'Caller-Context' => ['default', 'example'], 'Caller-Privacy-Hide-Name' => 'no'
-
-  def on_event e
-    puts "Got event: #{e.content[:event_name]}"
-  end
-
-  # You can add a hook for a certain event:
-  event :channel_hangup do
-    # It is instance_eval'ed, so you can use your instance methods etc:
-    do_something
-  end
-
-  # If your hook block takes an argument, a Librevox::Response object for
-  # the given event is passed on:
-  event :channel_bridge do |e|
-    ...
-  end
-
-  def do_something
-    ...
-  end
-end
+gem "librevox"
 ```
 
-## Outbound listener
+## Inbound Listener
 
-You create an outbound listener by subclassing `Librevox::Listener::Outbound`. 
+Subclass `Librevox::Listener::Inbound` to create an inbound listener. It connects to FreeSWITCH and subscribes to events.
 
 ### Events
 
-An outbound listener has the same event functionality as the inbound listener,
-but it only receives events related to that given session.
+React to events in two ways:
+
+1. Override `on_event`, called for every event.
+2. Use `event` hooks for specific event names.
+
+```ruby
+class MyInbound < Librevox::Listener::Inbound
+  def on_event(e)
+    puts "Got event: #{e.content[:event_name]}"
+  end
+
+  event :channel_hangup do
+    do_something
+  end
+
+  # The hook block receives a Response when it takes an argument:
+  event :channel_bridge do |e|
+    puts e.content[:caller_caller_id_number]
+  end
+
+  def do_something
+    # ...
+  end
+end
+```
+
+### Event Filtering
+
+By default, inbound listeners subscribe to all events. Use `events` to limit which events are received, and `filters` to filter by header values:
+
+```ruby
+class MyInbound < Librevox::Listener::Inbound
+  events ['CHANNEL_EXECUTE', 'CUSTOM foo']
+  filters 'Caller-Context' => ['default', 'example'],
+          'Caller-Privacy-Hide-Name' => 'no'
+end
+```
+
+## Outbound Listener
+
+Subclass `Librevox::Listener::Outbound` to create an outbound listener. FreeSWITCH connects to it when a call hits a socket application in the dialplan.
+
+Outbound listeners have the same event functionality as inbound, but scoped to the session.
 
 ### Dialplan
 
-When a call is made and Freeswitch connects to the outbound event listener,
-`session_initiated` is called. This is where you set up your dialplan:
+When FreeSWITCH connects, `session_initiated` is called. Build your dialplan here.
+
+Each application call blocks until FreeSWITCH signals completion (`CHANNEL_EXECUTE_COMPLETE`), so applications execute sequentially:
 
 ```ruby
-def session_initiated
-  answer do
-    set "some_var", "some value" do
-      playback "path/to/file" do
-        hangup
-      end
-    end
+class MyOutbound < Librevox::Listener::Outbound
+  def session_initiated
+    answer
+    digit = play_and_get_digits "enter-digit.wav", "bad-digit.wav"
+    bridge "sofia/gateway/trunk/#{digit}"
   end
 end
 ```
 
-All channel variables are available as a hash named `session`.
-
-When using applications that expect a reply, such as `play_and_get_digits`,
-you have to use callbacks to read the value, as the function itself returns
-immediately due to the async nature of EventMachine:
+Applications that read input (like `play_and_get_digits` and `read`) return the collected value directly.
 
 ```ruby
 def session_initiated
-  answer do
-    play_and_get_digits "enter-number.wav", "error.wav" do |digit|
-      puts "User pressed #{digit}"
-      playback "thanks-for-the-input.wav" do
-        hangup
-      end
-    end
-  end
+  answer
+  set "foo", "bar"
+  multiset "baz" => "1", "qux" => "2"
+  playback "welcome.wav"
+  hangup
 end
 ```
 
-You can also use the commands defined in `Librevox::Command`, which, to avoid
-namespace clashes, are accessed through the `api` object:
-    
+For apps not yet wrapped by a named helper, call `application` directly:
+
+```ruby
+application "park"
+```
+
+Channel variables are available through `session` (a hash) and `variable`:
+
 ```ruby
 def session_initiated
-  answer do
-    api.status
-  end
+  answer
+  number = variable(:destination_number)
+  playback "greeting-#{number}.wav"
 end
 ```
 
-They can be used in conjunction with applications, and do also take a block,
-passing the response to an eventual block argument.
+### API Commands
 
-## Starting listeners
-
-To start a single listener, connection/listening on localhost on the default
-port is quite simple:
+To avoid name clashes between applications and commands, commands are accessed through `api`:
 
 ```ruby
-Librevox.start SomeListener
+def session_initiated
+  answer
+  api.status
+  api.originate 'sofia/user/coltrane', extension: "1234"
+end
 ```
 
-it takes an optional hash with arguments:
+## Starting Listeners
+
+Start a single listener:
 
 ```ruby
-Librevox.start SomeListener, :host => "1.2.3.4", :port => "8087", :auth => "pwd"
+Librevox.start MyInbound
 ```
 
-Multiple listeners can be started at once by passing a block to `Librevox.start`:
+With connection options:
+
+```ruby
+Librevox.start MyInbound, host: "1.2.3.4", port: 8021, auth: "secret"
+```
+
+Start multiple listeners:
 
 ```ruby
 Librevox.start do
-  run SomeListener
-  run OtherListener, :port => "8080"
+  run MyInbound
+  run MyOutbound, port: 8084
 end
 ```
 
-## Closing connection
+Default ports are 8021 for inbound and 8084 for outbound.
 
-After a session has finished, e.g. because the calling part hangs up, an
-outbound socket still has its connection to FreeSWITCH open, so we can get post-
-session events. Therefore it is important that you close the connection manually
-when you are done. Otherwise you will have 'hanging' sessions, cloggering up
-your system. This can safely be done with `close_connection_after_writing`,
-which will wait for all outgoing data to be send before closing the connection.
-It is aliased as `done` for convenience.
+## Closing Connections
 
-Unless you are doing something specific, closing the connection on CHANNEL_HANGUP
-is most likely sufficient:
-    
+After a session ends (e.g. the caller hangs up), the outbound socket connection to FreeSWITCH remains open for post-session events. Close it manually when done to avoid lingering sessions. Use `done` (alias for `close_connection_after_writing`):
+
 ```ruby
-class MyListener < Librevox::Listener::Outbound
+class MyOutbound < Librevox::Listener::Outbound
   event :channel_hangup do
     done
   end
 end
 ```
 
+## Command Socket
+
+`Librevox::CommandSocket` connects to the FreeSWITCH management console for one-off commands:
+
+```ruby
+require "librevox/command_socket"
+
+socket = Librevox::CommandSocket.new(server: "127.0.0.1", port: 8021, auth: "ClueCon")
+
+socket.originate 'sofia/user/coltrane', extension: "1234"
+#=> #<Librevox::Protocol::Response ...>
+
+socket.status
+#=> #<Librevox::Protocol::Response ...>
+
+socket.close
+```
+
 ## Configuration
 
-By default Librevox uses the `Logger` class from the Ruby standard library. You
-can configure the path to the log file and the log level through `Librevox.options`:
-
 ```ruby
-Librevox.options[:log_file] = "my_log_file.log"
-Librevox.options[:log_level] = Logger::DEBUG
+Librevox.options[:log_file]  = "librevox.log"  # default: STDOUT
+Librevox.options[:log_level] = Logger::DEBUG    # default: Logger::INFO
 ```
 
-## Rotating logs
+When started with `Librevox.start`, sending `SIGHUP` to the process reopens the log file, making it compatible with `logrotate(1)`.
 
-If you start Librevox with `Librevox.start`, the log file will be reopened if you
-send `SIGHUP` to the Librevox process. This makes it easy to rotate logs with the
-standard `logrotate(1)`.
+## Event Socket Protocol
 
-## Using `Librevox::CommandSocket`
+Understanding the outbound event socket protocol is important for working on
+librevox internals.
 
-Librevox also ships with a CommandSocket class, which allows you to connect
-to the FreeSWITCH management console, from which you can originate calls,
-restart FreeSWITCH etc.
+### Outbound session lifecycle
 
-```ruby
->> require "librevox/command_socket"
-=> true
+When FreeSWITCH hits a `socket` application in the dialplan, it connects to the
+outbound listener. The listener sends three setup commands before any
+application logic runs:
 
->> socket = Librevox::CommandSocket.new
-=> #<Librevox::CommandSocket:0xb7a89104 @server=“127.0.0.1”,
-    @socket=#<TCPSocket:0xb7a8908c>, @port=“8021”, @auth=“ClueCon”>
+```
+Listener → FS:  connect
+FS → Listener:  (channel data — becomes @session)
 
->> socket.originate('sofia/user/coltrane', :extension => "1234")
->> #<Librevox::Response:0x10179d388 @content="+OK de0ecbbe-e847...">
+Listener → FS:  myevents
+FS → Listener:  command/reply +OK
 
->> socket.status
->> > #<Librevox::Response:0x1016acac8 ...>
+Listener → FS:  linger
+FS → Listener:  command/reply +OK  → triggers session_initiated
 ```
 
-## Further documentation
+### sendmsg and application execution
 
-All applications and commands are documented in the code. You can run
-`yardoc` from the root of the source tree to generate YARD docs. Look under
-the `Librevox::Commands` and `Librevox::Applications` modules.
+When an application (e.g. `answer`, `playback`, `bridge`) is executed via
+`sendmsg`, FreeSWITCH always sends the `command/reply +OK` immediately — it is
+an acknowledgement that the sendmsg was received, **not** that the application
+finished. Application completion is signalled by a `CHANNEL_EXECUTE_COMPLETE`
+event:
 
-## Extras
+```
+Listener → FS:  sendmsg
+                call-command: execute
+                execute-app-name: playback
+                execute-app-arg: welcome.wav
+                event-lock: true
 
-* Source: [http://github.com/vangberg/librevox](http://github.com/vangberg/librevox)
-* API docs: [http://rdoc.info/projects/vangberg/librevox](http://rdoc.info/projects/vangberg/librevox)
-* Mailing list: librevox@librelist.com
-* IRC: #librevox @ irc.freenode.net
+FS → Listener:  command/reply +OK              ← immediate ack
+FS → Listener:  CHANNEL_EXECUTE event          ← app started
+                ...app is running...
+FS → Listener:  CHANNEL_EXECUTE_COMPLETE event ← app finished
+```
+
+### event-lock
+
+The `event-lock: true` header serializes application execution **on the
+channel**. It does not change what is sent back on the socket.
+
+Without `event-lock`, if multiple sendmsg commands are pipelined, FreeSWITCH
+may dequeue and start executing the next application before the current one
+finishes. With `event-lock: true`, FreeSWITCH sets an internal flag
+(`CF_EVENT_LOCK`) on the channel that prevents the next queued sendmsg from
+being processed until the current application completes.
+
+### Two fibers per connection
+
+Librevox runs two fibers for each outbound connection:
+
+- **Session fiber** (`run_session`) — runs the setup sequence and then
+  `session_initiated`. Each `command` or `application` call blocks the fiber
+  until the reply arrives.
+- **Read fiber** (`read_loop`) — reads messages from the socket and dispatches
+  them to `Async::Queue` instances, waking the session fiber.
+
+An `Async::Semaphore(1)` mutex on `command` ensures only one command is
+in-flight at a time, so replies are always delivered to the correct caller.
+This also serializes commands issued by event hooks (which run in their own
+fibers) with the main session flow.
+
+## API Documentation
+
+Applications and commands are documented with YARD. Generate docs with:
+
+```
+yard doc
+```
+
+See `Librevox::Applications` and `Librevox::Commands` for the full API reference.
 
 ## License
 
-(c) 2009-2014 Harry Vangberg <harry@vangberg.name>
-(c) 2011-2014 Firmafon ApS <info@firmafon.dk>
-
-Librevox was inspired by and uses code from Freeswitcher, which is distributed
-under the MIT license and (c) 2009 The Rubyists (Jayson Vaughn, Tj Vanderpoel,
-Michael Fellinger, Kevin Berry), Harry Vangberg, see `LICENSE-Freeswitcher`.
-
-Librevox is distributed under the terms of the MIT license, see `LICENSE`.
+MIT. See `LICENSE` for details.

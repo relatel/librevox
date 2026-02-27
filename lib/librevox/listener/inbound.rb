@@ -1,4 +1,6 @@
-require 'librevox/listener/base'
+# frozen_string_literal: true
+
+require 'io/endpoint/host_endpoint'
 
 module Librevox
   module Listener
@@ -16,37 +18,37 @@ module Librevox
         end
       end
 
-      def initialize args={}
-        super
-
-        @auth = args[:auth] || "ClueCon"
-        @host, @port = args.values_at(:host, :port)
-
-        EventMachine.add_shutdown_hook {@shutdown = true}
+      def self.run(barrier, host: "localhost", port: 8021, **options)
+        endpoint = IO::Endpoint.tcp(host, port)
+        client = Client.new(self, endpoint, **options)
+        barrier.async { client.run }
       end
 
-      def connection_completed
-        Librevox.logger.info "Connected."
-        super
+      def initialize(connection = nil, args = {})
+        super(connection)
+        @auth = args[:auth] || "ClueCon"
+      end
 
-        send_data "auth #{@auth}\n\n"
+      def run_session
+        Librevox.logger.info "Connected."
+
+        command "auth #{@auth}"
 
         events = self.class.subscribe_events || ['ALL']
-        send_data "event plain #{events.join(' ')}\n\n"
+        command "event plain #{events.join(' ')}"
 
         filters = self.class.subscribe_filters || {}
         filters.each do |header, values|
           [*values].each do |value|
-            send_data "filter #{header} #{value}\n\n"
+            command "filter #{header} #{value}"
           end
         end
+
+        connection_completed
+        sleep # keep session alive for event hooks and child tasks
       end
 
-      def unbind
-        if !@shutdown
-          Librevox.logger.error "Lost connection. Reconnecting in 1 second."
-          EM.add_timer(1) {reconnect(@host, @port.to_i)}
-        end
+      def connection_completed
       end
     end
   end

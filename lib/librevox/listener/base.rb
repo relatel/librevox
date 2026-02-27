@@ -1,16 +1,23 @@
-require 'eventmachine'
-require 'librevox/response'
-require 'librevox/commands'
+# frozen_string_literal: true
+
+require 'async/queue'
+require 'async/semaphore'
 
 module Librevox
   module Listener
-    class Base < EventMachine::Protocols::HeaderAndContentProtocol
+    class Base
+      def initialize(connection = nil)
+        @connection = connection
+        @reply_queue = Async::Queue.new
+        @command_mutex = Async::Semaphore.new(1)
+      end
+
       class << self
         def hooks
           @hooks ||= Hash.new {|hash, key| hash[key] = []}
         end
 
-        def event event, &block
+        def event(event, &block)
           hooks[event] << block
         end
       end
@@ -22,12 +29,12 @@ module Librevox
       class CommandDelegate
         include Librevox::Commands
 
-        def initialize listener
+        def initialize(listener)
           @listener = listener
         end
 
-        def command *args, &block
-          @listener.command super(*args), &block
+        def command(*args)
+          @listener.command(super(*args))
         end
       end
 
@@ -41,47 +48,67 @@ module Librevox
         @command_delegate ||= CommandDelegate.new(self)
       end
 
-      def command msg, &block
-        send_data "#{msg}\n\n"
-
-        @command_queue.push(block)
+      def command(msg)
+        @command_mutex.acquire do
+          send_data "#{msg}\n\n"
+          @reply_queue.dequeue
+        end
       end
 
       attr_accessor :response
-      alias :event :response
 
-      def post_init
-        @command_queue = []
-      end
-
-      def receive_request header, content
-        @response = Librevox::Response.new(header, content)
+      def receive_message(response)
+        @response = response
         handle_response
       end
 
       def handle_response
-        if response.api_response? && @command_queue.any?
-          @command_queue.shift.call(response)
+        if response.reply?
+          @reply_queue.push(response)
+          return
         end
 
         if response.event?
-          on_event(response.dup)
-          invoke_event_hooks
+          resp = response
+          Async do
+            on_event(resp)
+            invoke_event_hooks(resp)
+          end
         end
       end
 
       # override
-      def on_event event
+      def on_event(event)
+      end
+
+      def send_data(data)
+        @connection&.write(data)
+      end
+
+      def read_loop
+        while (msg = @connection.read_message)
+          receive_message(msg)
+        end
+      end
+
+      def run_session
+      end
+
+      def close_connection_after_writing
+        @connection&.close
       end
 
       alias :done :close_connection_after_writing
 
       private
-      def invoke_event_hooks
-        event = response.event.downcase.to_sym
-        self.class.hooks[event].each {|block|
-          instance_exec(response.dup, &block)
-        }
+
+      def invoke_event_hooks(resp)
+        event_name = resp.event.downcase.to_sym
+        hooks = self.class.hooks[event_name]
+
+        hooks.each do |block|
+          instance_exec(resp, &block)
+        end
       end
     end
   end

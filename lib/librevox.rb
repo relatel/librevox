@@ -1,15 +1,31 @@
+# frozen_string_literal: true
+
 require 'logger'
-require 'fiber'
-require 'eventmachine'
-require 'librevox/listener/inbound'
-require 'librevox/listener/outbound'
-require 'librevox/command_socket'
+require 'librevox/version'
 
 module Librevox
+  autoload :Client, 'librevox/client'
+  autoload :CommandSocket, 'librevox/command_socket'
+  autoload :Commands, 'librevox/commands'
+  autoload :Applications, 'librevox/applications'
+  autoload :Runner, 'librevox/runner'
+  autoload :Server, 'librevox/server'
+
+  module Protocol
+    autoload :Connection, 'librevox/protocol/connection'
+    autoload :Response, 'librevox/protocol/response'
+  end
+
+  module Listener
+    autoload :Base, 'librevox/listener/base'
+    autoload :Inbound, 'librevox/listener/inbound'
+    autoload :Outbound, 'librevox/listener/outbound'
+  end
+
   def self.options
     @options ||= {
-      :log_file   => STDOUT,
-      :log_level  => Logger::INFO
+      log_file: STDOUT,
+      log_level: Logger::INFO
     }
   end
 
@@ -17,7 +33,7 @@ module Librevox
     @logger ||= logger!
   end
 
-  def self.logger= logger
+  def self.logger=(logger)
     @logger = logger
   end
 
@@ -31,43 +47,17 @@ module Librevox
     @logger = logger!
   end
 
-  # When called without a block, it will start the listener that is passed as
-  # first argument:
-  #   
-  #   Librevox.start SomeListener
+  # Start a single listener:
   #
-  # To start multiple listeners, call with a block and use `run`:
+  #   Librevox.start MyInbound
+  #   Librevox.start MyInbound, host: "1.2.3.4", auth: "secret"
+  #
+  # Start multiple listeners with a block:
   #
   #   Librevox.start do
-  #     run SomeListener
-  #     run OtherListner
+  #     run MyInbound
+  #     run MyOutbound, port: 8084
   #   end
-  def self.start klass=nil, args={}, &block
-    logger.info "Starting Librevox"
+  def self.start(...) = Runner.start(...)
 
-    EM.run do
-      trap("TERM") {stop}
-      trap("INT") {stop}
-      trap("HUP") {reopen_log}
-
-      block_given? ? instance_eval(&block) : run(klass, args)
-    end
-  end
-
-  def self.run klass, args={}
-    args[:host] ||= "localhost"
-
-    if klass.ancestors.include? Librevox::Listener::Inbound
-      args[:port] ||= 8021
-      EM.connect args[:host], args[:port], klass, args
-    elsif klass.ancestors.include? Librevox::Listener::Outbound
-      args[:port] ||= 8084
-      EM.start_server args[:host], args[:port], klass, args
-    end
-  end
-
-  def self.stop
-    logger.info "Terminating Librevox"
-    EM.stop
-  end
 end

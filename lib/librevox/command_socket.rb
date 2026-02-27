@@ -1,13 +1,13 @@
+# frozen_string_literal: true
+
 require 'socket'
-require 'librevox/response'
-require 'librevox/commands'
-require 'librevox/applications'
+require 'io/stream'
 
 module Librevox
   class CommandSocket
     include Librevox::Commands
 
-    def initialize args={}
+    def initialize(args = {})
       @server   = args[:server] || "127.0.0.1"
       @port     = args[:port] || "8021"
       @auth     = args[:auth] || "ClueCon"
@@ -17,39 +17,25 @@ module Librevox
 
     def connect
       @socket = TCPSocket.open(@server, @port)
-      @socket.print "auth #{@auth}\n\n"
+      stream = IO::Stream(@socket)
+      @connection = Protocol::Connection.new(stream)
+      @connection.write "auth #{@auth}\n\n"
       read_response
     end
 
-    def command *args
-      @socket.print "#{super(*args)}\n\n"
+    def command(*args)
+      @connection.write "#{super(*args)}\n\n"
       read_response
     end
 
     def read_response
-      response = Librevox::Response.new
-      until response.command_reply? or response.api_response?
-        response.headers = read_headers 
+      while msg = @connection.read_message
+        return msg if msg.command_reply? || msg.api_response?
       end
-
-      length = response.headers[:content_length].to_i
-      response.content = @socket.read(length) if length > 0
-
-      response
-    end
-
-    def read_headers
-      headers = ""
-
-      while line = @socket.gets and !line.chomp.empty?
-        headers += line
-      end
-
-      headers
     end
 
     def close
-      @socket.close
+      @connection.close
     end
   end
 end
