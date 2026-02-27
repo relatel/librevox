@@ -56,7 +56,6 @@ module Librevox
       end
 
       attr_accessor :response
-      alias :event :response
 
       def receive_message(response)
         @response = response

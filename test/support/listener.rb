@@ -96,11 +96,11 @@ module EventTests
     assert_equal "got event: HOOK_WITH_ARG", @listener.read_data
   end
 
-  def test_expose_response_as_event
+  def test_expose_response
     event "OTHER_EVENT"
 
-    assert_equal Librevox::Protocol::Response, @listener.event.class
-    assert_equal "OTHER_EVENT", @listener.event.content[:event_name]
+    assert_equal Librevox::Protocol::Response, @listener.response.class
+    assert_equal "OTHER_EVENT", @listener.response.content[:event_name]
   end
 
   def test_call_on_event
