@@ -67,9 +67,9 @@ module EventTests
 
     @class.event(:some_event) {send_data "something"}
     @class.event(:other_event) {send_data "something else"}
-    @class.event(:hook_with_arg) {|e| send_data "got event arg: #{e.object_id}"}
+    @class.event(:hook_with_arg) {|e| send_data "got event: #{e.event}"}
 
-    @listener.on_event_block = proc {|e| send_data "from on_event: #{e.object_id}"}
+    @listener.on_event_block = proc {|e| send_data "from on_event: #{e.event}"}
 
     # Establish session
     @listener.receive_message("Content-Length: 0\nTest: Testing", "")
@@ -90,12 +90,10 @@ module EventTests
     assert_equal "something", @listener.read_data
   end
 
-  def test_pass_response_duplicate_as_arg_to_hook_block
+  def test_pass_event_as_arg_to_hook_block
     event "HOOK_WITH_ARG"
 
-    reply = @listener.read_data
-    assert_match(/^got event arg: /, reply)
-    refute_match(/^got event arg: #{@listener.response.object_id}$/, reply)
+    assert_equal "got event: HOOK_WITH_ARG", @listener.read_data
   end
 
   def test_expose_response_as_event
@@ -108,13 +106,7 @@ module EventTests
   def test_call_on_event
     event "THIRD_EVENT"
 
-    assert_match(/^from on_event/, @listener.read_data)
-  end
-
-  def test_call_on_event_with_response_duplicate_as_argument
-    event "THIRD_EVENT"
-
-    refute_match(/^from on_event: #{@listener.response.object_id}$/, @listener.read_data)
+    assert_equal "from on_event: THIRD_EVENT", @listener.read_data
   end
 
   def test_call_event_hooks_and_on_event_on_channel_data

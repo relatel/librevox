@@ -72,7 +72,7 @@ module Librevox
         end
 
         if response.event?
-          resp = response.dup
+          resp = response
           Async do
             on_event(resp)
             invoke_event_hooks(resp)
