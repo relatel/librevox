@@ -24,6 +24,12 @@ module Librevox
         end
       end
 
+      def read_loop
+        while (msg = read_message)
+          yield msg
+        end
+      end
+
       def write(data)
         @stream.write(data)
         @stream.flush

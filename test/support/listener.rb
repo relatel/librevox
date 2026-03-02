@@ -65,11 +65,11 @@ module EventTests
     @class = @listener.class
     @class.hooks.clear
 
-    @class.event(:some_event) {send_data "something"}
-    @class.event(:other_event) {send_data "something else"}
-    @class.event(:hook_with_arg) {|e| send_data "got event: #{e.event}"}
+    @class.event(:some_event) {write "something"}
+    @class.event(:other_event) {write "something else"}
+    @class.event(:hook_with_arg) {|e| write "got event: #{e.event}"}
 
-    @listener.on_event_block = proc {|e| send_data "from on_event: #{e.event}"}
+    @listener.on_event_block = proc {|e| write "from on_event: #{e.event}"}
 
     # Establish session
     @listener.receive_message(Librevox::Protocol::Response.new("Content-Length: 0\nTest: Testing", ""))
@@ -112,8 +112,8 @@ module EventTests
   def test_call_event_hooks_and_on_event_on_channel_data
     @listener.outgoing_data.clear
 
-    @listener.on_event_block = proc {|e| send_data "on_event: CHANNEL_DATA test"}
-    @class.event(:channel_data) {send_data "event hook: CHANNEL_DATA test"}
+    @listener.on_event_block = proc {|e| write "on_event: CHANNEL_DATA test"}
+    @class.event(:channel_data) {write "event hook: CHANNEL_DATA test"}
 
     event "CHANNEL_DATA"
 

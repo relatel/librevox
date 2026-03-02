@@ -26,7 +26,7 @@ module Librevox
 
       def sendmsg(msg)
         @command_mutex.acquire do
-          send_data "sendmsg\n#{msg}\n\n"
+          write "sendmsg\n#{msg}\n\n"
           @reply_queue.dequeue          # command/reply ack
         end
         @app_complete_queue.dequeue     # CHANNEL_EXECUTE_COMPLETE

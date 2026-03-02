@@ -171,12 +171,12 @@ Default ports are 8021 for inbound and 8084 for outbound.
 
 ## Closing Connections
 
-After a session ends (e.g. the caller hangs up), the outbound socket connection to FreeSWITCH remains open for post-session events. Close it manually when done to avoid lingering sessions. Use `done` (alias for `close_connection_after_writing`):
+After a session ends (e.g. the caller hangs up), the outbound socket connection to FreeSWITCH remains open for post-session events. Close it manually when done to avoid lingering sessions:
 
 ```ruby
 class MyOutbound < Librevox::Listener::Outbound
   event :channel_hangup do
-    done
+    disconnect
   end
 end
 ```

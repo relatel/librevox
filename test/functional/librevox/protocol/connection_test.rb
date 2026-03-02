@@ -67,6 +67,19 @@ class ProtocolConnectionTest < Minitest::Test
     assert_nil @connection.read_message
   end
 
+  def test_read_loop_yields_each_message
+    @write_io.write "Content-Type: command/reply\n\n"
+    @write_io.write "Content-Type: api/response\n\n"
+    @write_io.close
+
+    messages = []
+    @connection.read_loop { |msg| messages << msg }
+
+    assert_equal 2, messages.size
+    assert_equal "command/reply", messages[0].headers[:content_type]
+    assert_equal "api/response", messages[1].headers[:content_type]
+  end
+
   def test_write_delegates_to_stream
     write_stream = IO::Stream(@write_io)
     conn = Librevox::Protocol::Connection.new(write_stream)

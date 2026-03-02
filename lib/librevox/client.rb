@@ -19,7 +19,7 @@ module Librevox
       listener = @handler.new(connection, @options)
 
       session_task = Async { listener.run_session }
-      listener.read_loop
+      connection.read_loop { |msg| listener.receive_message(msg) }
     ensure
       session_task&.stop
       connection.close

@@ -6,7 +6,7 @@ require 'librevox/listener/outbound'
 
 class OutboundTestListener < Librevox::Listener::Outbound
   def session_initiated
-    send_data "session was initiated"
+    write "session was initiated"
   end
 end
 
