@@ -18,7 +18,7 @@ module Librevox
       listener = @handler.new(connection)
 
       session_task = Async { listener.run_session }
-      listener.read_loop
+      connection.read_loop { |msg| listener.receive_message(msg) }
     rescue => e
       Librevox.logger.error "Session error: #{e.full_message}"
     ensure

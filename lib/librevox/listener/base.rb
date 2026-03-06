@@ -50,7 +50,7 @@ module Librevox
 
       def command(msg)
         @command_mutex.acquire do
-          send_data "#{msg}\n\n"
+          write "#{msg}\n\n"
           @reply_queue.dequeue
         end
       end
@@ -81,24 +81,16 @@ module Librevox
       def on_event(event)
       end
 
-      def send_data(data)
+      def write(data)
         @connection&.write(data)
-      end
-
-      def read_loop
-        while (msg = @connection.read_message)
-          receive_message(msg)
-        end
       end
 
       def run_session
       end
 
-      def close_connection_after_writing
+      def disconnect
         @connection&.close
       end
-
-      alias :done :close_connection_after_writing
 
       private
 
