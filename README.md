@@ -1,3 +1,7 @@
+<p align="center">
+  <img src=".github/banner.svg" alt="Librevox" width="100%">
+</p>
+
 # Librevox
 
 A Ruby library for interacting with [FreeSWITCH](http://www.freeswitch.org) through [mod_event_socket](https://developer.signalwire.com/freeswitch/FreeSWITCH-Explained/Modules/mod_event_socket_1048924/), using async I/O.
