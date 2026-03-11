@@ -1,0 +1,283 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 280">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff8f0" />
+      <stop offset="100%" style="stop-color:#f0f4ff" />
+    </linearGradient>
+
+    <linearGradient id="wire" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fbbf24" />
+      <stop offset="50%" style="stop-color:#f472b6" />
+      <stop offset="100%" style="stop-color:#818cf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="280" rx="20" fill="url(#bg)" />
+
+  <!-- Confetti bits -->
+  <g opacity="0.5">
+    <!-- Squares -->
+    <rect x="80" y="40" width="8" height="8" rx="1.5" fill="#fbbf24" transform="rotate(25 84 44)">
+      <animateTransform attributeName="transform" type="rotate" values="25 84 44;385 84 44" dur="12s" repeatCount="indefinite" />
+    </rect>
+    <rect x="870" y="55" width="7" height="7" rx="1.5" fill="#818cf8" transform="rotate(-15 873 58)">
+      <animateTransform attributeName="transform" type="rotate" values="-15 873 58;-375 873 58" dur="15s" repeatCount="indefinite" />
+    </rect>
+    <rect x="140" y="220" width="6" height="6" rx="1" fill="#f472b6" transform="rotate(40 143 223)">
+      <animateTransform attributeName="transform" type="rotate" values="40 143 223;400 143 223" dur="10s" repeatCount="indefinite" />
+    </rect>
+    <rect x="820" y="210" width="7" height="7" rx="1.5" fill="#34d399" transform="rotate(-30 823 213)">
+      <animateTransform attributeName="transform" type="rotate" values="-30 823 213;-390 823 213" dur="14s" repeatCount="indefinite" />
+    </rect>
+
+    <!-- Circles -->
+    <circle cx="200" cy="60" r="4" fill="#f472b6" opacity="0.6">
+      <animate attributeName="cy" values="60;50;60" dur="3s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="760" cy="45" r="3.5" fill="#fbbf24" opacity="0.6">
+      <animate attributeName="cy" values="45;38;45" dur="3.5s" repeatCount="indefinite" begin="0.5s" />
+    </circle>
+    <circle cx="100" cy="150" r="3" fill="#818cf8" opacity="0.5">
+      <animate attributeName="cy" values="150;142;150" dur="4s" repeatCount="indefinite" begin="1s" />
+    </circle>
+    <circle cx="860" cy="140" r="3" fill="#f472b6" opacity="0.5">
+      <animate attributeName="cy" values="140;132;140" dur="3.8s" repeatCount="indefinite" begin="0.3s" />
+    </circle>
+
+    <!-- Triangles -->
+    <polygon points="55,130 62,118 69,130" fill="#34d399" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="4s" repeatCount="indefinite" />
+      <animateTransform attributeName="transform" type="rotate" values="0 62 124;360 62 124" dur="18s" repeatCount="indefinite" />
+    </polygon>
+    <polygon points="890,170 897,158 904,170" fill="#fbbf24" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="3.5s" repeatCount="indefinite" begin="1s" />
+      <animateTransform attributeName="transform" type="rotate" values="0 897 164;-360 897 164" dur="16s" repeatCount="indefinite" />
+    </polygon>
+
+    <!-- Stars -->
+    <polygon points="300,35 302,30 304,35 309,35 305,38 307,43 302,40 297,43 299,38 295,35" fill="#fbbf24" opacity="0.6">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" repeatCount="indefinite" />
+    </polygon>
+    <polygon points="660,40 662,35 664,40 669,40 665,43 667,48 662,45 657,48 659,43 655,40" fill="#f472b6" opacity="0.5">
+      <animate attributeName="opacity" values="0.3;0.7;0.3" dur="4s" repeatCount="indefinite" begin="1.5s" />
+    </polygon>
+  </g>
+
+  <!-- Curly phone cord (left side) -->
+  <path d="M 225,140 C 240,110 250,170 265,140 C 280,110 290,170 305,140 C 320,110 330,170 345,140" fill="none" stroke="url(#wire)" stroke-width="3.5" stroke-linecap="round" opacity="0.5">
+    <animate attributeName="d"
+      values="M 225,140 C 240,110 250,170 265,140 C 280,110 290,170 305,140 C 320,110 330,170 345,140;
+              M 225,140 C 240,115 250,165 265,140 C 280,115 290,165 305,140 C 320,115 330,165 345,140;
+              M 225,140 C 240,110 250,170 265,140 C 280,110 290,170 305,140 C 320,110 330,170 345,140"
+      dur="3s" repeatCount="indefinite" />
+  </path>
+
+  <!-- Curly phone cord (right side) -->
+  <path d="M 615,140 C 630,110 640,170 655,140 C 670,110 680,170 695,140 C 710,110 720,170 735,140" fill="none" stroke="url(#wire)" stroke-width="3.5" stroke-linecap="round" opacity="0.5">
+    <animate attributeName="d"
+      values="M 615,140 C 630,110 640,170 655,140 C 670,110 680,170 695,140 C 710,110 720,170 735,140;
+              M 615,140 C 630,115 640,165 655,140 C 670,115 680,165 695,140 C 710,115 720,165 735,140;
+              M 615,140 C 630,110 640,170 655,140 C 670,110 680,170 695,140 C 710,110 720,170 735,140"
+      dur="3.5s" repeatCount="indefinite" begin="0.5s" />
+  </path>
+
+  <!-- Cartoon rotary phone (left) -->
+  <g transform="translate(155, 105)">
+    <!-- Phone body -->
+    <rect x="0" y="20" width="80" height="55" rx="16" fill="#fbbf24" stroke="#e5a410" stroke-width="2" />
+    <!-- Rotary dial -->
+    <circle cx="40" cy="48" r="18" fill="#fff8e1" stroke="#e5a410" stroke-width="2" />
+    <circle cx="40" cy="48" r="12" fill="none" stroke="#d4a020" stroke-width="1.5" stroke-dasharray="4 4">
+      <animateTransform attributeName="transform" type="rotate" values="0 40 48;360 40 48" dur="8s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="40" cy="48" r="4" fill="#e5a410" />
+    <!-- Handset cradle -->
+    <rect x="5" y="12" width="70" height="14" rx="7" fill="#f59e0b" stroke="#e5a410" stroke-width="1.5" />
+    <!-- Handset (lifted, bobbing) -->
+    <g>
+      <animate attributeName="opacity" values="1;1" dur="1s" />
+      <animateTransform attributeName="transform" type="translate" values="0,0; 0,-4; 0,0" dur="2s" repeatCount="indefinite" />
+      <rect x="8" y="-8" width="64" height="16" rx="8" fill="#f97316" stroke="#e5730f" stroke-width="1.5" />
+      <!-- Earpiece -->
+      <circle cx="15" cy="0" r="8" fill="#fb923c" stroke="#e5730f" stroke-width="1.5" />
+      <!-- Mouthpiece -->
+      <circle cx="65" cy="0" r="8" fill="#fb923c" stroke="#e5730f" stroke-width="1.5" />
+      <!-- Sound waves from earpiece -->
+      <g opacity="0.6">
+        <path d="M -2,0 C -6,-5 -6,5 -2,0" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round">
+          <animate attributeName="opacity" values="0;0.8;0" dur="1.5s" repeatCount="indefinite" />
+        </path>
+        <path d="M -6,0 C -12,-8 -12,8 -6,0" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round">
+          <animate attributeName="opacity" values="0;0.6;0" dur="1.5s" repeatCount="indefinite" begin="0.3s" />
+        </path>
+        <path d="M -10,0 C -18,-11 -18,11 -10,0" fill="none" stroke="#f97316" stroke-width="1.2" stroke-linecap="round">
+          <animate attributeName="opacity" values="0;0.4;0" dur="1.5s" repeatCount="indefinite" begin="0.6s" />
+        </path>
+      </g>
+    </g>
+    <!-- Feet -->
+    <circle cx="15" cy="77" r="4" fill="#e5a410" />
+    <circle cx="65" cy="77" r="4" fill="#e5a410" />
+  </g>
+
+  <!-- Cartoon server rack (right) -->
+  <g transform="translate(740, 95)">
+    <!-- Rack body -->
+    <rect x="0" y="0" width="65" height="85" rx="8" fill="#818cf8" stroke="#6366f1" stroke-width="2" />
+    <!-- Top unit -->
+    <rect x="8" y="8" width="49" height="18" rx="4" fill="#a5b4fc" stroke="#6366f1" stroke-width="1.5" />
+    <!-- Blinking LED -->
+    <circle cx="46" cy="17" r="3" fill="#34d399">
+      <animate attributeName="fill" values="#34d399;#fbbf24;#34d399" dur="2s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="38" cy="17" r="3" fill="#34d399">
+      <animate attributeName="fill" values="#34d399;#34d399;#fbbf24;#34d399" dur="3s" repeatCount="indefinite" begin="0.5s" />
+    </circle>
+    <!-- Middle unit -->
+    <rect x="8" y="32" width="49" height="18" rx="4" fill="#a5b4fc" stroke="#6366f1" stroke-width="1.5" />
+    <circle cx="46" cy="41" r="3" fill="#34d399">
+      <animate attributeName="fill" values="#34d399;#f472b6;#34d399" dur="2.5s" repeatCount="indefinite" begin="0.8s" />
+    </circle>
+    <circle cx="38" cy="41" r="3" fill="#fbbf24">
+      <animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" />
+    </circle>
+    <!-- Bottom unit -->
+    <rect x="8" y="56" width="49" height="18" rx="4" fill="#a5b4fc" stroke="#6366f1" stroke-width="1.5" />
+    <circle cx="46" cy="65" r="3" fill="#34d399" />
+    <circle cx="38" cy="65" r="3" fill="#34d399" />
+    <!-- Slot lines on units -->
+    <line x1="14" y1="14" x2="30" y2="14" stroke="#6366f1" stroke-width="1" opacity="0.4" />
+    <line x1="14" y1="19" x2="28" y2="19" stroke="#6366f1" stroke-width="1" opacity="0.3" />
+    <line x1="14" y1="38" x2="30" y2="38" stroke="#6366f1" stroke-width="1" opacity="0.4" />
+    <line x1="14" y1="43" x2="28" y2="43" stroke="#6366f1" stroke-width="1" opacity="0.3" />
+    <line x1="14" y1="62" x2="30" y2="62" stroke="#6366f1" stroke-width="1" opacity="0.4" />
+    <line x1="14" y1="67" x2="28" y2="67" stroke="#6366f1" stroke-width="1" opacity="0.3" />
+    <!-- Antenna -->
+    <line x1="50" y1="0" x2="50" y2="-15" stroke="#6366f1" stroke-width="2" stroke-linecap="round" />
+    <circle cx="50" cy="-18" r="4" fill="#f472b6">
+      <animate attributeName="r" values="4;5;4" dur="2s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
+    </circle>
+    <!-- Signal arcs from antenna -->
+    <g transform="translate(50, -18)">
+      <path d="M 8,-6 C 14,-2 14,2 8,6" fill="none" stroke="#f472b6" stroke-width="1.5" stroke-linecap="round">
+        <animate attributeName="opacity" values="0;0.7;0" dur="2s" repeatCount="indefinite" />
+      </path>
+      <path d="M 13,-9 C 21,-3 21,3 13,9" fill="none" stroke="#f472b6" stroke-width="1.2" stroke-linecap="round">
+        <animate attributeName="opacity" values="0;0.5;0" dur="2s" repeatCount="indefinite" begin="0.4s" />
+      </path>
+    </g>
+    <!-- Feet -->
+    <circle cx="12" cy="87" r="4" fill="#6366f1" />
+    <circle cx="53" cy="87" r="4" fill="#6366f1" />
+  </g>
+
+  <!-- Ruby gem (floating between title and waveform) -->
+  <g transform="translate(480, 185)">
+    <animateTransform attributeName="transform" type="translate" values="480,185;480,180;480,185" dur="3s" repeatCount="indefinite" />
+    <!-- Gem shape -->
+    <polygon points="0,-14 16,-2 10,12 -10,12 -16,-2" fill="#ef4444" stroke="#dc2626" stroke-width="1.5" opacity="0.85" />
+    <!-- Gem facets -->
+    <line x1="0" y1="-14" x2="0" y2="12" stroke="#dc2626" stroke-width="0.8" opacity="0.4" />
+    <line x1="-16" y1="-2" x2="10" y2="12" stroke="#dc2626" stroke-width="0.8" opacity="0.3" />
+    <line x1="16" y1="-2" x2="-10" y2="12" stroke="#dc2626" stroke-width="0.8" opacity="0.3" />
+    <!-- Shine -->
+    <polygon points="-3,-10 5,-4 0,-2 -8,-6" fill="white" opacity="0.35" />
+  </g>
+
+  <!-- Musical notes floating up -->
+  <g opacity="0.45">
+    <text x="125" y="85" font-size="18" fill="#f97316" font-family="serif">
+      <animate attributeName="y" values="85;65;85" dur="4s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.2;0.6;0.2" dur="4s" repeatCount="indefinite" />
+    </text>
+    <text x="108" y="100" font-size="14" fill="#f472b6" font-family="serif">
+      <animate attributeName="y" values="100;82;100" dur="3.5s" repeatCount="indefinite" begin="0.8s" />
+      <animate attributeName="opacity" values="0.2;0.5;0.2" dur="3.5s" repeatCount="indefinite" begin="0.8s" />
+    </text>
+  </g>
+
+  <!-- Speech bubbles with "bits" -->
+  <g transform="translate(265, 80)" opacity="0.55">
+    <rect x="0" y="0" width="42" height="22" rx="11" fill="white" stroke="#fbbf24" stroke-width="1.5" />
+    <text x="21" y="15" text-anchor="middle" font-family="monospace" font-size="9" fill="#e5a410" font-weight="bold">010</text>
+    <polygon points="12,22 18,28 22,22" fill="white" stroke="#fbbf24" stroke-width="1.5" stroke-linejoin="round" />
+    <line x1="12" y1="22" x2="22" y2="22" stroke="white" stroke-width="2" />
+    <animate attributeName="opacity" values="0.55;0.8;0.55" dur="3s" repeatCount="indefinite" />
+  </g>
+
+  <g transform="translate(660, 75)" opacity="0.55">
+    <rect x="0" y="0" width="42" height="22" rx="11" fill="white" stroke="#818cf8" stroke-width="1.5" />
+    <text x="21" y="15" text-anchor="middle" font-family="monospace" font-size="9" fill="#6366f1" font-weight="bold">101</text>
+    <polygon points="20,22 24,28 30,22" fill="white" stroke="#818cf8" stroke-width="1.5" stroke-linejoin="round" />
+    <line x1="20" y1="22" x2="30" y2="22" stroke="white" stroke-width="2" />
+    <animate attributeName="opacity" values="0.55;0.8;0.55" dur="3.5s" repeatCount="indefinite" begin="1s" />
+  </g>
+
+  <!-- Title -->
+  <text x="480" y="130" text-anchor="middle" font-family="'Rounded Mplus 1c', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="52" font-weight="800" fill="#3b3160" letter-spacing="-1">
+    librevox
+  </text>
+
+  <!-- Tagline -->
+  <text x="480" y="158" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#8b85a8" letter-spacing="1" font-weight="500">
+    async telephony for Ruby
+  </text>
+
+  <!-- Bouncy waveform (bottom) -->
+  <g transform="translate(480, 240)">
+    <rect x="-78" width="6" rx="3" fill="#fbbf24" opacity="0.8">
+      <animate attributeName="height" values="10;28;10" dur="1.2s" repeatCount="indefinite" begin="0s" />
+      <animate attributeName="y" values="-5;-14;-5" dur="1.2s" repeatCount="indefinite" begin="0s" />
+    </rect>
+    <rect x="-65" width="6" rx="3" fill="#f97316" opacity="0.8">
+      <animate attributeName="height" values="16;36;16" dur="1.2s" repeatCount="indefinite" begin="0.1s" />
+      <animate attributeName="y" values="-8;-18;-8" dur="1.2s" repeatCount="indefinite" begin="0.1s" />
+    </rect>
+    <rect x="-52" width="6" rx="3" fill="#f472b6" opacity="0.85">
+      <animate attributeName="height" values="22;42;22" dur="1.2s" repeatCount="indefinite" begin="0.2s" />
+      <animate attributeName="y" values="-11;-21;-11" dur="1.2s" repeatCount="indefinite" begin="0.2s" />
+    </rect>
+    <rect x="-39" width="6" rx="3" fill="#e44d8a" opacity="0.85">
+      <animate attributeName="height" values="14;38;14" dur="1.2s" repeatCount="indefinite" begin="0.3s" />
+      <animate attributeName="y" values="-7;-19;-7" dur="1.2s" repeatCount="indefinite" begin="0.3s" />
+    </rect>
+    <rect x="-26" width="6" rx="3" fill="#a855f7" opacity="0.9">
+      <animate attributeName="height" values="26;44;26" dur="1.2s" repeatCount="indefinite" begin="0.4s" />
+      <animate attributeName="y" values="-13;-22;-13" dur="1.2s" repeatCount="indefinite" begin="0.4s" />
+    </rect>
+    <rect x="-13" width="6" rx="3" fill="#818cf8" opacity="0.9">
+      <animate attributeName="height" values="18;40;18" dur="1.2s" repeatCount="indefinite" begin="0.5s" />
+      <animate attributeName="y" values="-9;-20;-9" dur="1.2s" repeatCount="indefinite" begin="0.5s" />
+    </rect>
+    <rect x="0" width="6" rx="3" fill="#6366f1" opacity="0.9">
+      <animate attributeName="height" values="28;46;28" dur="1.2s" repeatCount="indefinite" begin="0.6s" />
+      <animate attributeName="y" values="-14;-23;-14" dur="1.2s" repeatCount="indefinite" begin="0.6s" />
+    </rect>
+    <rect x="13" width="6" rx="3" fill="#818cf8" opacity="0.9">
+      <animate attributeName="height" values="18;40;18" dur="1.2s" repeatCount="indefinite" begin="0.5s" />
+      <animate attributeName="y" values="-9;-20;-9" dur="1.2s" repeatCount="indefinite" begin="0.5s" />
+    </rect>
+    <rect x="26" width="6" rx="3" fill="#a855f7" opacity="0.9">
+      <animate attributeName="height" values="26;44;26" dur="1.2s" repeatCount="indefinite" begin="0.4s" />
+      <animate attributeName="y" values="-13;-22;-13" dur="1.2s" repeatCount="indefinite" begin="0.4s" />
+    </rect>
+    <rect x="39" width="6" rx="3" fill="#e44d8a" opacity="0.85">
+      <animate attributeName="height" values="14;38;14" dur="1.2s" repeatCount="indefinite" begin="0.3s" />
+      <animate attributeName="y" values="-7;-19;-7" dur="1.2s" repeatCount="indefinite" begin="0.3s" />
+    </rect>
+    <rect x="52" width="6" rx="3" fill="#f472b6" opacity="0.85">
+      <animate attributeName="height" values="22;42;22" dur="1.2s" repeatCount="indefinite" begin="0.2s" />
+      <animate attributeName="y" values="-11;-21;-11" dur="1.2s" repeatCount="indefinite" begin="0.2s" />
+    </rect>
+    <rect x="65" width="6" rx="3" fill="#f97316" opacity="0.8">
+      <animate attributeName="height" values="16;36;16" dur="1.2s" repeatCount="indefinite" begin="0.1s" />
+      <animate attributeName="y" values="-8;-18;-8" dur="1.2s" repeatCount="indefinite" begin="0.1s" />
+    </rect>
+    <rect x="78" width="6" rx="3" fill="#fbbf24" opacity="0.8">
+      <animate attributeName="height" values="10;28;10" dur="1.2s" repeatCount="indefinite" begin="0s" />
+      <animate attributeName="y" values="-5;-14;-5" dur="1.2s" repeatCount="indefinite" begin="0s" />
+    </rect>
+  </g>
+</svg>
