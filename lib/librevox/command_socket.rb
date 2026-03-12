@@ -16,22 +16,32 @@ module Librevox
     end
 
     def connect
-      @socket = TCPSocket.open(@server, @port)
-      stream = IO::Stream(@socket)
+      socket = TCPSocket.open(@server, @port)
+      stream = IO::Stream(socket)
       @connection = Protocol::Connection.new(stream)
-      @connection.write "auth #{@auth}\n\n"
+      send_message "auth #{@auth}"
+    end
+
+    def send_message(msg)
+      @connection.send_message(msg)
       read_response
     end
 
     def command(*args)
-      @connection.write "#{super(*args)}\n\n"
-      read_response
+      send_message(super(*args))
     end
 
     def read_response
       while msg = @connection.read_message
         return msg if msg.command_reply? || msg.api_response?
       end
+    end
+
+    def application(uuid, app, args = nil)
+      parts = ["sendmsg #{uuid}", "call-command: execute", "execute-app-name: #{app}"]
+      parts << "execute-app-arg: #{args}" if args && !args.empty?
+      parts << "event-lock: true"
+      send_message parts.join("\n")
     end
 
     def close

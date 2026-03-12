@@ -24,7 +24,7 @@ module Librevox
         barrier.async { client.run }
       end
 
-      def initialize(connection = nil, args = {})
+      def initialize(connection, args = {})
         super(connection)
         @auth = args[:auth] || "ClueCon"
       end
@@ -32,15 +32,15 @@ module Librevox
       def run_session
         Librevox.logger.info "Connected."
 
-        command "auth #{@auth}"
+        send_message "auth #{@auth}"
 
         events = self.class.subscribe_events || ['ALL']
-        command "event plain #{events.join(' ')}"
+        send_message "event plain #{events.join(' ')}"
 
         filters = self.class.subscribe_filters || {}
         filters.each do |header, values|
           [*values].each do |value|
-            command "filter #{header} #{value}"
+            send_message "filter #{header} #{value}"
           end
         end
 

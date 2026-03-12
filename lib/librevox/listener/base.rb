@@ -6,7 +6,7 @@ require 'async/semaphore'
 module Librevox
   module Listener
     class Base
-      def initialize(connection = nil)
+      def initialize(connection)
         @connection = connection
         @reply_queue = Async::Queue.new
         @command_mutex = Async::Semaphore.new(1)
@@ -34,7 +34,7 @@ module Librevox
         end
 
         def command(*args)
-          @listener.command(super(*args))
+          @listener.send_message(super(*args))
         end
       end
 
@@ -48,9 +48,9 @@ module Librevox
         @command_delegate ||= CommandDelegate.new(self)
       end
 
-      def command(msg)
+      def send_message(msg)
         @command_mutex.acquire do
-          write "#{msg}\n\n"
+          @connection.send_message(msg)
           @reply_queue.dequeue
         end
       end
@@ -79,10 +79,6 @@ module Librevox
 
       # override
       def on_event(event)
-      end
-
-      def write(data)
-        @connection&.write(data)
       end
 
       def run_session

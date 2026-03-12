@@ -14,22 +14,15 @@ module Librevox
       end
 
       def application(app, args = nil, params = {})
-        parts = ["call-command: execute", "execute-app-name: #{app}"]
+        parts = ["sendmsg", "call-command: execute", "execute-app-name: #{app}"]
         parts << "execute-app-arg: #{args}" if args && !args.empty?
         parts << "event-lock: true"
 
-        response = sendmsg parts.join("\n")
+        send_message parts.join("\n")
+        response = @app_complete_queue.dequeue
         @session = response.content
 
         params[:variable] ? variable(params[:variable]) : nil
-      end
-
-      def sendmsg(msg)
-        @command_mutex.acquire do
-          write "sendmsg\n#{msg}\n\n"
-          @reply_queue.dequeue          # command/reply ack
-        end
-        @app_complete_queue.dequeue     # CHANNEL_EXECUTE_COMPLETE
       end
 
       attr_accessor :session
@@ -38,16 +31,16 @@ module Librevox
       def session_initiated
       end
 
-      def initialize(connection = nil)
+      def initialize(connection)
         super(connection)
         @session = nil
         @app_complete_queue = Async::Queue.new
       end
 
       def run_session
-        @session = command("connect").headers
-        command "myevents"
-        command "linger"
+        @session = send_message("connect").headers
+        send_message "myevents"
+        send_message "linger"
         session_initiated
         sleep # keep session alive for event hooks and child tasks
       end
