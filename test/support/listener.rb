@@ -9,8 +9,8 @@ class MockConnection
     @data = []
   end
 
-  def write(data)
-    @data << data
+  def send_message(msg)
+    @data << msg
   end
 
   def read_message
@@ -23,13 +23,23 @@ end
 
 module ListenerTestMock
   attr_accessor :on_event_block
+  attr_reader :hook_log
+
+  def initialize(...)
+    super
+    @hook_log = []
+  end
+
+  def log(msg)
+    @hook_log << msg
+  end
 
   def outgoing_data
     @connection.data
   end
 
   def read_data
-    @connection.data.pop
+    @hook_log.pop
   end
 
   def on_event(e)
@@ -65,11 +75,11 @@ module EventTests
     @class = @listener.class
     @class.hooks.clear
 
-    @class.event(:some_event) {write "something"}
-    @class.event(:other_event) {write "something else"}
-    @class.event(:hook_with_arg) {|e| write "got event: #{e.event}"}
+    @class.event(:some_event) {log "something"}
+    @class.event(:other_event) {log "something else"}
+    @class.event(:hook_with_arg) {|e| log "got event: #{e.event}"}
 
-    @listener.on_event_block = proc {|e| write "from on_event: #{e.event}"}
+    @listener.on_event_block = proc {|e| log "from on_event: #{e.event}"}
 
     # Establish session
     @listener.receive_message(Librevox::Protocol::Response.new("Content-Length: 0\nTest: Testing", ""))
@@ -110,15 +120,15 @@ module EventTests
   end
 
   def test_call_event_hooks_and_on_event_on_channel_data
-    @listener.outgoing_data.clear
+    @listener.hook_log.clear
 
-    @listener.on_event_block = proc {|e| write "on_event: CHANNEL_DATA test"}
-    @class.event(:channel_data) {write "event hook: CHANNEL_DATA test"}
+    @listener.on_event_block = proc {|e| log "on_event: CHANNEL_DATA test"}
+    @class.event(:channel_data) {log "event hook: CHANNEL_DATA test"}
 
     event "CHANNEL_DATA"
 
-    assert_includes @listener.outgoing_data, "on_event: CHANNEL_DATA test"
-    assert_includes @listener.outgoing_data, "event hook: CHANNEL_DATA test"
+    assert_includes @listener.hook_log, "on_event: CHANNEL_DATA test"
+    assert_includes @listener.hook_log, "event hook: CHANNEL_DATA test"
   end
 end
 

@@ -9,7 +9,7 @@ Librevox.logger.level = Logger::WARN
 module Librevox::Test
   module Matchers
     def assert_send_command(obj, command)
-      assert_equal "#{command}\n\n", obj.outgoing_data.shift
+      assert_equal command, obj.outgoing_data.shift
     end
 
     def assert_send_nothing(obj)
@@ -21,12 +21,12 @@ module Librevox::Test
       parts << "execute-app-arg: #{args}" if args
       parts << "event-lock: true"
 
-      assert_equal parts.join("\n") + "\n\n", obj.outgoing_data.shift
+      assert_equal parts.join("\n"), obj.outgoing_data.shift
     end
 
     def assert_update_session(obj, session_id = nil)
       if session_id
-        assert_equal "api uuid_dump #{session_id}\n\n", obj.outgoing_data.shift
+        assert_equal "api uuid_dump #{session_id}", obj.outgoing_data.shift
       else
         assert_match(/^api uuid_dump \d+/, obj.outgoing_data.shift)
       end

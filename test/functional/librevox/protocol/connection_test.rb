@@ -80,11 +80,11 @@ class ProtocolConnectionTest < Minitest::Test
     assert_equal "api/response", messages[1].headers[:content_type]
   end
 
-  def test_write_delegates_to_stream
+  def test_send_message_writes_with_terminator
     write_stream = IO::Stream(@write_io)
     conn = Librevox::Protocol::Connection.new(write_stream)
 
-    conn.write("auth ClueCon\n\n")
+    conn.send_message("auth ClueCon")
     write_stream.close
 
     assert_equal "auth ClueCon\n\n", @read_io.read

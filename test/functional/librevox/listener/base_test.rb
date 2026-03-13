@@ -19,7 +19,7 @@ class TestListenerBase < Minitest::Test
     completed = Thread.new {
       Sync do
         event "SOME_EVENT"
-        assert_equal "api test\n\n", @listener.read_data
+        assert_equal "api test", @listener.outgoing_data.shift
         command_reply "Reply-Text" => "+OK"
       end
     }.join(1)

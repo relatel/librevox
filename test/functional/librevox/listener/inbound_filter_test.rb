@@ -37,11 +37,11 @@ class TestInboundListenerWithFiltering < Minitest::Test
   end
 
   def test_authorize_and_subscribe_to_events
-    assert_equal "auth ClueCon\n\n", @listener.outgoing_data.shift
-    assert_equal "event plain CUSTOM CHANNEL_EXECUTE\n\n", @listener.outgoing_data.shift
-    assert_equal "filter Caller-Context default\n\n", @listener.outgoing_data.shift
-    assert_equal "filter Caller-Context example\n\n", @listener.outgoing_data.shift
-    assert_equal "filter Caller-Privacy-Hide-Name no\n\n", @listener.outgoing_data.shift
+    assert_equal "auth ClueCon", @listener.outgoing_data.shift
+    assert_equal "event plain CUSTOM CHANNEL_EXECUTE", @listener.outgoing_data.shift
+    assert_equal "filter Caller-Context default", @listener.outgoing_data.shift
+    assert_equal "filter Caller-Context example", @listener.outgoing_data.shift
+    assert_equal "filter Caller-Privacy-Hide-Name no", @listener.outgoing_data.shift
     assert_nil @listener.outgoing_data.shift
   end
 end

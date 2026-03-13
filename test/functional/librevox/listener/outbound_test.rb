@@ -6,7 +6,7 @@ require 'librevox/listener/outbound'
 
 class OutboundTestListener < Librevox::Listener::Outbound
   def session_initiated
-    write "session was initiated"
+    log "session was initiated"
   end
 end
 
@@ -45,7 +45,7 @@ class TestOutboundListener < Minitest::Test
   end
 
   def test_call_session_callback_after_establishing_new_session
-    assert_equal "session was initiated", @listener.outgoing_data.pop
+    assert_includes @listener.hook_log, "session was initiated"
   end
 
   def test_make_headers_available_through_session

@@ -30,8 +30,8 @@ module Librevox
         end
       end
 
-      def write(data)
-        @stream.write(data)
+      def send_message(msg)
+        @stream.write("#{msg}\n\n")
         @stream.flush
       end
 
