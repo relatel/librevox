@@ -11,6 +11,18 @@ class OutboundListenerWithNestedApps < Librevox::Listener::Outbound
   end
 end
 
+class OutboundListenerWithCustomHeaders < Librevox::Listener::Outbound
+  def session_initiated
+    looping_app "playback", "/tmp/test.wav"
+  end
+end
+
+class OutboundListenerWithEventLockOverride < Librevox::Listener::Outbound
+  def session_initiated
+    unlocked_app "playback", "/tmp/test.wav"
+  end
+end
+
 class TestOutboundListenerWithApps < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
@@ -75,5 +87,55 @@ class TestOutboundListenerWithApps < Minitest::Test
     command_reply "Reply-Text" => "+OK"
 
     assert_send_nothing @listener
+  end
+end
+
+class TestOutboundListenerWithCustomHeaders < Minitest::Test
+  prepend Librevox::Test::AsyncTest
+  include OutboundSetupHelpers
+  include Librevox::Test::Matchers
+
+  def setup
+    @listener = OutboundListenerWithCustomHeaders.new(MockConnection.new)
+    @session_task = Async { @listener.run_session }
+
+    command_reply "Establish-Session" => "OK",
+                  "Unique-ID"         => "1234"
+    event_and_linger_replies
+    3.times {@listener.outgoing_data.shift}
+  end
+
+  def teardown
+    @session_task&.stop
+    super
+  end
+
+  def test_sends_custom_headers
+    assert_send_application @listener, "playback", "/tmp/test.wav", loops: 3
+  end
+end
+
+class TestOutboundListenerWithEventLockOverride < Minitest::Test
+  prepend Librevox::Test::AsyncTest
+  include OutboundSetupHelpers
+  include Librevox::Test::Matchers
+
+  def setup
+    @listener = OutboundListenerWithEventLockOverride.new(MockConnection.new)
+    @session_task = Async { @listener.run_session }
+
+    command_reply "Establish-Session" => "OK",
+                  "Unique-ID"         => "1234"
+    event_and_linger_replies
+    3.times {@listener.outgoing_data.shift}
+  end
+
+  def teardown
+    @session_task&.stop
+    super
+  end
+
+  def test_overrides_event_lock
+    assert_send_application @listener, "playback", "/tmp/test.wav", event_lock: false
   end
 end

@@ -150,9 +150,7 @@ module Librevox
       args = [min, max, tries, timeout, terminators, file, invalid_file,
         variable, regexp].join " "
 
-      params = {variable: variable}
-
-      application "play_and_get_digits", args, params
+      application "play_and_get_digits", args, variable: variable
     end
 
     # Plays a sound file on the current channel.
@@ -182,9 +180,7 @@ module Librevox
       arg_string = "%s %s %s %s %s %s" % [min, max, file, variable, timeout,
         terminators]
 
-      params = {variable: variable}
-
-      application "read", arg_string, params
+      application "read", arg_string, variable: variable
     end
 
     # Records a message, with an optional limit on the maximum duration of the

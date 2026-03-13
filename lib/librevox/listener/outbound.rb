@@ -13,16 +13,24 @@ module Librevox
         barrier.async { server.run }
       end
 
-      def application(app, args = nil, params = {})
-        parts = ["sendmsg", "call-command: execute", "execute-app-name: #{app}"]
-        parts << "execute-app-arg: #{args}" if args && !args.empty?
-        parts << "event-lock: true"
+      def application(app, args = nil, **params)
+        variable_name = params.delete(:variable)
 
-        send_message parts.join("\n")
+        headers = params
+          .merge(
+            event_lock:        true,
+            call_command:      "execute",
+            execute_app_name:  app,
+            execute_app_arg:   args,
+          )
+          .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
+
+        send_message "sendmsg\n#{headers.join("\n")}"
+
         response = @app_complete_queue.dequeue
         @session = response.content
 
-        params[:variable] ? variable(params[:variable]) : nil
+        variable(variable_name) if variable_name
       end
 
       attr_accessor :session

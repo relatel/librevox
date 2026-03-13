@@ -16,12 +16,17 @@ module Librevox::Test
       assert_nil obj.outgoing_data.shift
     end
 
-    def assert_send_application(obj, app, args = nil)
-      parts = ["sendmsg", "call-command: execute", "execute-app-name: #{app}"]
-      parts << "execute-app-arg: #{args}" if args
-      parts << "event-lock: true"
+    def assert_send_application(obj, app, args = nil, **params)
+      headers = params
+        .merge(
+          event_lock:       true,
+          call_command:     "execute",
+          execute_app_name: app,
+          execute_app_arg:  args,
+        )
+        .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
 
-      assert_equal parts.join("\n"), obj.outgoing_data.shift
+      assert_equal "sendmsg\n#{headers.join("\n")}", obj.outgoing_data.shift
     end
 
     def assert_update_session(obj, session_id = nil)
