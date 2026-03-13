@@ -61,7 +61,15 @@ module Librevox::Applications
   end
 
   def reader_app
-    application 'reader_app', "", {variable: 'app_var'}
+    application 'reader_app', "", variable: 'app_var'
+  end
+
+  def looping_app(name, file)
+    application name, file, loops: 3
+  end
+
+  def unlocked_app(name, file)
+    application name, file, event_lock: false
   end
 end
 

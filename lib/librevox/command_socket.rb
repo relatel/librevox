@@ -37,11 +37,17 @@ module Librevox
       end
     end
 
-    def application(uuid, app, args = nil)
-      parts = ["sendmsg #{uuid}", "call-command: execute", "execute-app-name: #{app}"]
-      parts << "execute-app-arg: #{args}" if args && !args.empty?
-      parts << "event-lock: true"
-      send_message parts.join("\n")
+    def application(uuid, app, args = nil, **params)
+      headers = params
+        .merge(
+          event_lock:       true,
+          call_command:     "execute",
+          execute_app_name: app,
+          execute_app_arg:  args,
+        )
+        .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
+
+      send_message "sendmsg #{uuid}\n#{headers.join("\n")}"
     end
 
     def close
