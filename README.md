@@ -271,12 +271,12 @@ being processed until the current application completes.
 Librevox runs two fibers for each outbound connection:
 
 - **Session fiber** (`run_session`) — runs the setup sequence and then
-  `session_initiated`. Each `command` or `application` call blocks the fiber
+  `session_initiated`. Each `send_message` or `application` call blocks the fiber
   until the reply arrives.
 - **Read fiber** (`read_loop`) — reads messages from the socket and dispatches
   them to `Async::Queue` instances, waking the session fiber.
 
-An `Async::Semaphore(1)` mutex on `command` ensures only one command is
+An `Async::Semaphore(1)` mutex on `send_message` ensures only one command is
 in-flight at a time, so replies are always delivered to the correct caller.
 This also serializes commands issued by event hooks (which run in their own
 fibers) with the main session flow.
