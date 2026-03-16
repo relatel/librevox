@@ -50,7 +50,6 @@ module Librevox
         send_message "myevents"
         send_message "linger"
         session_initiated
-        sleep # keep session alive for event hooks and child tasks
       end
 
       def handle_response

@@ -27,7 +27,10 @@ module Librevox
     end
 
     def run
-      @endpoint.accept(&method(:accept))
+      Async do |task|
+        @endpoint.accept(&method(:accept))
+        task.children.each(&:wait)
+      end
     end
   end
 end
