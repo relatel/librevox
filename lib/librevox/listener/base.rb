@@ -85,7 +85,7 @@ module Librevox
       end
 
       def disconnect
-        @connection&.close
+        @connection&.close_write
       end
 
       private

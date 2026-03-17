@@ -39,7 +39,7 @@ module Librevox
       def session_initiated
       end
 
-      def initialize(connection)
+      def initialize(connection, options = {})
         super(connection)
         @session = nil
         @app_complete_queue = Async::Queue.new
