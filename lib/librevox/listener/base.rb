@@ -51,7 +51,9 @@ module Librevox
       def send_message(msg)
         @command_mutex.acquire do
           @connection.send_message(msg)
-          @reply_queue.dequeue
+          reply = @reply_queue.dequeue
+          raise Librevox::ResponseError, reply.headers[:reply_text] if reply.error?
+          reply
         end
       end
 

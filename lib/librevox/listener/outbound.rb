@@ -50,6 +50,8 @@ module Librevox
         send_message "myevents"
         send_message "linger"
         session_initiated
+      rescue Librevox::ResponseError => e
+        Librevox.logger.error "Session error: #{e.message}"
       end
 
       def handle_response

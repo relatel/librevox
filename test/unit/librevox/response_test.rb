@@ -73,13 +73,38 @@ class TestResponse < Minitest::Test
     assert_equal "hello+world", response.content[:some_header]
   end
 
-  def test_does_not_url_decode_non_event_content
+  def test_url_decode_non_event_content
     response = Librevox::Protocol::Response.new("Content-Type: command/reply", "Reply-Text: %2BOK")
-    assert_equal "%2BOK", response.content[:reply_text]
+    assert_equal "+OK", response.content[:reply_text]
   end
 
   def test_does_not_url_decode_headers
     response = Librevox::Protocol::Response.new("Content-Type: text%2Fevent-plain", "")
     assert_equal "text%2Fevent-plain", response.headers[:content_type]
+  end
+
+  def test_error_on_command_reply_with_err
+    response = Librevox::Protocol::Response.new("Content-Type: command/reply\nReply-Text: -ERR invalid command", "")
+    assert response.error?
+  end
+
+  def test_error_on_api_response_with_err
+    response = Librevox::Protocol::Response.new("Content-Type: api/response\nReply-Text: -ERR no such command", "")
+    assert response.error?
+  end
+
+  def test_not_error_on_ok_reply
+    response = Librevox::Protocol::Response.new("Content-Type: command/reply\nReply-Text: +OK", "")
+    refute response.error?
+  end
+
+  def test_not_error_on_event
+    response = Librevox::Protocol::Response.new("Content-Type: text/event-plain", "Event-Name: Hangup")
+    refute response.error?
+  end
+
+  def test_not_error_on_reply_without_reply_text
+    response = Librevox::Protocol::Response.new("Content-Type: command/reply", "Foo: Bar")
+    refute response.error?
   end
 end
