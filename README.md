@@ -86,6 +86,8 @@ class MyInbound < Librevox::Listener::Inbound
 end
 ```
 
+**Note on CUSTOM events:** FreeSWITCH custom events have a subclass name (e.g. `CUSTOM conference::maintenance`). You must include both the event name and subclass — `events ['CUSTOM conference::maintenance']`. Using just `events ['CUSTOM']` will not match any custom events.
+
 ## Outbound Listener
 
 Subclass `Librevox::Listener::Outbound` to create an outbound listener. FreeSWITCH connects to it when a call hits a socket application in the dialplan.
