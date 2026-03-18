@@ -32,6 +32,10 @@ module Librevox
         api_response? || command_reply?
       end
 
+      def error?
+        reply? && headers[:reply_text]&.start_with?("-ERR")
+      end
+
       private
 
       def parse_headers(headers)
@@ -42,7 +46,7 @@ module Librevox
         return content unless content.include?(":")
 
         headers, body = content.split("\n\n", 2)
-        parse_kv(headers, decode: event?).merge(body: body || "")
+        parse_kv(headers, decode: true).merge(body: body || "")
       end
 
       def parse_kv(string, decode: false)
@@ -51,7 +55,7 @@ module Librevox
           name, value = line.split(':', 2)
           next unless value
           value = URI::RFC2396_PARSER.unescape(value) if decode
-          hash[name.downcase.tr('-', '_').to_sym] = value.strip
+          hash[name.downcase.gsub(/[^a-z0-9_]/, '_').to_sym] = value.strip
         end
         hash
       end

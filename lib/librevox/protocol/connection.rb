@@ -35,6 +35,12 @@ module Librevox
         @stream.flush
       end
 
+      def close_write
+        @stream.close_write
+      rescue IOError, Errno::ENOTCONN
+        # Already closed or not connected
+      end
+
       def close
         return if @stream.closed?
 

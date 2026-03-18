@@ -39,7 +39,7 @@ module Librevox
       def session_initiated
       end
 
-      def initialize(connection)
+      def initialize(connection, options = {})
         super(connection)
         @session = nil
         @app_complete_queue = Async::Queue.new
@@ -50,6 +50,8 @@ module Librevox
         send_message "myevents"
         send_message "linger"
         session_initiated
+      rescue Librevox::ResponseError => e
+        Librevox.logger.error "Session error: #{e.message}"
       end
 
       def handle_response
