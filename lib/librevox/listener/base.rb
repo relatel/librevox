@@ -54,8 +54,8 @@ module Librevox
         @command_mutex.acquire do
           @connection.send_message(msg)
           reply = @reply_queue.dequeue
-          raise Librevox::ConnectionError, "Connection closed" if reply.nil?
-          raise Librevox::ResponseError, reply.headers[:reply_text] if reply.error?
+          raise ConnectionError, "Connection closed" if reply.nil?
+          raise ResponseError, reply.headers[:reply_text] if reply.error?
           reply
         end
       end

@@ -30,7 +30,7 @@ module Librevox
         response = @app_complete_queue.dequeue
 
         if response.nil?
-          raise Librevox::ConnectionError, "Connection closed"
+          raise ConnectionError, "Connection closed"
         end
 
         @session = response.content
@@ -58,7 +58,7 @@ module Librevox
         send_message "linger"
 
         session_initiated
-      rescue Librevox::ResponseError, Librevox::ConnectionError, IOError, Errno::EPIPE => e
+      rescue ResponseError, ConnectionError, IOError, Errno::EPIPE => e
         Librevox.logger.error "Session error: #{e.message}"
       end
 
