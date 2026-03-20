@@ -2,6 +2,7 @@
 
 require 'async/queue'
 require 'async/semaphore'
+require 'async/barrier'
 
 module Librevox
   module Listener
@@ -10,6 +11,7 @@ module Librevox
         @connection = connection
         @reply_queue = Async::Queue.new
         @command_mutex = Async::Semaphore.new(1)
+        @event_barrier = Async::Barrier.new
       end
 
       class << self
@@ -52,6 +54,7 @@ module Librevox
         @command_mutex.acquire do
           @connection.send_message(msg)
           reply = @reply_queue.dequeue
+          raise Librevox::ConnectionError, "Connection closed" if reply.nil?
           raise Librevox::ResponseError, reply.headers[:reply_text] if reply.error?
           reply
         end
@@ -72,7 +75,7 @@ module Librevox
 
         if response.event?
           resp = response
-          Async do
+          @event_barrier.async do
             on_event(resp)
             invoke_event_hooks(resp)
           end
@@ -84,6 +87,10 @@ module Librevox
       end
 
       def run_session
+      end
+
+      def connection_closed
+        @reply_queue.close
       end
 
       def disconnect

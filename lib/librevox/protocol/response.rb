@@ -28,6 +28,10 @@ module Librevox
         @headers[:content_type] == "command/reply"
       end
 
+      def disconnect_notice?
+        @headers[:content_type] == "text/disconnect-notice"
+      end
+
       def reply?
         api_response? || command_reply?
       end

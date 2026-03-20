@@ -26,6 +26,7 @@ module Librevox
 
       def initialize(connection, args = {})
         super(connection)
+
         @auth = args[:auth] || "ClueCon"
       end
 
@@ -35,6 +36,7 @@ module Librevox
         send_message "auth #{@auth}"
 
         events = self.class.subscribe_events || ['ALL']
+
         send_message "event plain #{events.join(' ')}"
 
         filters = self.class.subscribe_filters || {}

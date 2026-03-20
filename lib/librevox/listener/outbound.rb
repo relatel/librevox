@@ -28,6 +28,11 @@ module Librevox
         send_message "sendmsg\n#{headers.join("\n")}"
 
         response = @app_complete_queue.dequeue
+
+        if response.nil?
+          raise Librevox::ConnectionError, "Connection closed"
+        end
+
         @session = response.content
 
         variable(variable_name) if variable_name
@@ -41,17 +46,26 @@ module Librevox
 
       def initialize(connection, options = {})
         super(connection)
+
         @session = nil
         @app_complete_queue = Async::Queue.new
       end
 
       def run_session
         @session = send_message("connect").headers
+
         send_message "myevents"
         send_message "linger"
+
         session_initiated
-      rescue Librevox::ResponseError => e
+      rescue Librevox::ResponseError, Librevox::ConnectionError, IOError, Errno::EPIPE => e
         Librevox.logger.error "Session error: #{e.message}"
+      end
+
+      def connection_closed
+        super
+
+        @app_complete_queue.close
       end
 
       def handle_response
