@@ -27,6 +27,15 @@ class NormalLifecycleListener < Librevox::Listener::Outbound
   end
 end
 
+SLOW_HOOK_RESULT = Queue.new
+
+class SlowEventHookListener < Librevox::Listener::Outbound
+  event(:channel_hangup) do
+    sleep 0.2
+    SLOW_HOOK_RESULT << :completed
+  end
+end
+
 class DisconnectFromSessionListener < Librevox::Listener::Outbound
   def session_initiated
     disconnect
@@ -94,6 +103,38 @@ module DisconnectTestHelpers
     else
       flunk "Timed out waiting for connection to close — disconnect did not work"
     end
+  end
+end
+
+class TestEventHookCompletion < Minitest::Test
+  include DisconnectTestHelpers
+
+  def setup
+    SLOW_HOOK_RESULT.clear
+  end
+
+  def test_event_hooks_complete_before_connection_closes
+    port, server_thread = start_server(SlowEventHookListener)
+    socket = fake_fs_connect(port)
+
+    # Send CHANNEL_HANGUP event — triggers slow hook (0.2s sleep)
+    body = "Event-Name: CHANNEL_HANGUP"
+    socket.write("Content-Type: text/event-plain\nContent-Length: #{body.size}\n\n#{body}")
+
+    # Immediately trigger latch — both conditions met
+    send_hangup_complete(socket)
+    send_disconnect_notice(socket)
+
+    # Connection should stay open until the slow hook finishes
+    assert_connection_closed(socket)
+
+    # Hook must have completed before the connection closed
+    result = SLOW_HOOK_RESULT.pop(true) rescue nil
+    assert_equal :completed, result, "Event hook was killed before completing"
+  ensure
+    socket&.close
+    server_thread&.kill
+    server_thread&.join(1)
   end
 end
 

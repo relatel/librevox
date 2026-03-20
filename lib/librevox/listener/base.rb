@@ -91,6 +91,7 @@ module Librevox
 
       def connection_closed
         @reply_queue.close
+        @event_barrier.wait
       end
 
       def disconnect
