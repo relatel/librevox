@@ -7,6 +7,34 @@ require 'librevox/server'
 require 'async'
 require 'io/endpoint'
 require 'io/stream'
+require 'timeout'
+
+class BlockedOnAppListener < Librevox::Listener::Outbound
+  attr_reader :error
+
+  def session_initiated
+    sample_app "playback", "/tmp/test.wav"
+  rescue Librevox::ConnectionError => e
+    @error = e
+  end
+end
+
+class NormalLifecycleListener < Librevox::Listener::Outbound
+  attr_reader :initiated
+
+  def session_initiated
+    @initiated = true
+  end
+end
+
+SLOW_HOOK_RESULT = Queue.new
+
+class SlowEventHookListener < Librevox::Listener::Outbound
+  event(:channel_hangup) do
+    sleep 0.2
+    SLOW_HOOK_RESULT << :completed
+  end
+end
 
 class DisconnectFromSessionListener < Librevox::Listener::Outbound
   def session_initiated
@@ -57,6 +85,15 @@ module DisconnectTestHelpers
     socket
   end
 
+  def send_hangup_complete(socket)
+    body = "Event-Name: CHANNEL_HANGUP_COMPLETE"
+    socket.write("Content-Type: text/event-plain\nContent-Length: #{body.size}\n\n#{body}")
+  end
+
+  def send_disconnect_notice(socket)
+    socket.write("Content-Type: text/disconnect-notice\n\n")
+  end
+
   def assert_connection_closed(socket)
     ready = IO.select([socket], nil, nil, 3)
     if ready
@@ -66,6 +103,101 @@ module DisconnectTestHelpers
     else
       flunk "Timed out waiting for connection to close — disconnect did not work"
     end
+  end
+end
+
+class TestEventHookCompletion < Minitest::Test
+  include DisconnectTestHelpers
+
+  def setup
+    SLOW_HOOK_RESULT.clear
+  end
+
+  def test_event_hooks_complete_before_connection_closes
+    port, server_thread = start_server(SlowEventHookListener)
+    socket = fake_fs_connect(port)
+
+    # Send CHANNEL_HANGUP event — triggers slow hook (0.2s sleep)
+    body = "Event-Name: CHANNEL_HANGUP"
+    socket.write("Content-Type: text/event-plain\nContent-Length: #{body.size}\n\n#{body}")
+
+    # Immediately trigger latch — both conditions met
+    send_hangup_complete(socket)
+    send_disconnect_notice(socket)
+
+    # Connection should stay open until the slow hook finishes
+    assert_connection_closed(socket)
+
+    # Hook must have completed before the connection closed
+    result = SLOW_HOOK_RESULT.pop(true) rescue nil
+    assert_equal :completed, result, "Event hook was killed before completing"
+  ensure
+    socket&.close
+    server_thread&.kill
+    server_thread&.join(1)
+  end
+end
+
+class TestNormalLifecycle < Minitest::Test
+  include DisconnectTestHelpers
+
+  def test_clean_shutdown_on_hangup_complete_and_disconnect_notice
+    port, server_thread = start_server(NormalLifecycleListener)
+    socket = fake_fs_connect(port)
+
+    send_hangup_complete(socket)
+    send_disconnect_notice(socket)
+
+    assert_connection_closed(socket)
+  ensure
+    socket&.close
+    server_thread&.kill
+    server_thread&.join(1)
+  end
+
+  def test_clean_shutdown_disconnect_notice_before_hangup_complete
+    port, server_thread = start_server(NormalLifecycleListener)
+    socket = fake_fs_connect(port)
+
+    send_disconnect_notice(socket)
+    send_hangup_complete(socket)
+
+    assert_connection_closed(socket)
+  ensure
+    socket&.close
+    server_thread&.kill
+    server_thread&.join(1)
+  end
+end
+
+class TestConnectionDrop < Minitest::Test
+  include DisconnectTestHelpers
+
+  def test_connection_drop_unblocks_blocked_send_message
+    port, server_thread = start_server(BlockedOnAppListener)
+    socket = fake_fs_connect(port)
+
+    # session_initiated calls sample_app which sends sendmsg and blocks on app_complete_queue
+    msg = socket.gets("\n\n")
+    assert_match(/sendmsg/, msg)
+
+    # ack the sendmsg
+    socket.write("Content-Type: command/reply\nReply-Text: +OK\n\n")
+
+    # Now the listener is blocked on app_complete_queue.dequeue
+    # Drop the connection — should unblock via queue close
+    socket.close
+    socket = nil
+
+    # Server should accept another connection without hanging,
+    # proving the first connection was cleaned up properly
+    socket2 = Timeout.timeout(3) { TCPSocket.new("127.0.0.1", port) }
+    assert socket2, "Server accepted new connection after drop"
+  ensure
+    socket&.close
+    socket2&.close
+    server_thread&.kill
+    server_thread&.join(1)
   end
 end
 

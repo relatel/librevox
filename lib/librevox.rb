@@ -5,6 +5,7 @@ require 'librevox/version'
 
 module Librevox
   class ResponseError < StandardError; end
+  class ConnectionError < StandardError; end
 
   autoload :Client, 'librevox/client'
   autoload :CommandSocket, 'librevox/command_socket'

@@ -20,7 +20,7 @@ module Librevox
             content = ""
           end
 
-          return Librevox::Protocol::Response.new(headers, content)
+          return Response.new(headers, content)
         end
       end
 
