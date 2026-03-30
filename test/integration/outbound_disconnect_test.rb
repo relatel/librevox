@@ -10,12 +10,8 @@ require 'io/stream'
 require 'timeout'
 
 class BlockedOnAppListener < Librevox::Listener::Outbound
-  attr_reader :error
-
   def session_initiated
     sample_app "playback", "/tmp/test.wav"
-  rescue Librevox::ConnectionError => e
-    @error = e
   end
 end
 

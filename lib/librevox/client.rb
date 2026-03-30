@@ -35,6 +35,8 @@ module Librevox
       listener.run_session
 
       read_task.wait
+    rescue ConnectionError
+      # Expected when the connection drops
     ensure
       read_task&.stop
       connection.close

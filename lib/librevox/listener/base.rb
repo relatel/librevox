@@ -90,6 +90,8 @@ module Librevox
         @app_promises.clear
 
         @event_barrier.wait
+      rescue ConnectionError
+        # Expected — event hooks may have been mid-command when disconnected
       end
 
       def disconnect
