@@ -23,7 +23,7 @@ module Librevox
     end
 
     def send_message(msg)
-      @connection.send_message(msg)
+      @connection.send_data(msg)
       read_response
     end
 
@@ -32,12 +32,12 @@ module Librevox
     end
 
     def read_response
-      while msg = @connection.read_message
+      while msg = @connection.receive_data
         return msg if msg.command_reply? || msg.api_response?
       end
     end
 
-    def application(uuid, app, args = nil, **params)
+    def application(app, uuid, args = nil, **params)
       headers = params
         .merge(
           event_lock:       true,
