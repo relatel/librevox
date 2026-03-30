@@ -16,43 +16,43 @@ class ProtocolConnectionTest < Minitest::Test
     @write_io.close unless @write_io.closed?
   end
 
-  def test_read_headers_only_message
+  def test_receives_headers_only_message
     @write_io.write "Content-Type: command/reply\nReply-Text: +OK\n\n"
     @write_io.close
 
-    msg = @connection.read_message
+    msg = @connection.receive_data
     assert_instance_of Librevox::Protocol::Response, msg
     assert_equal "command/reply", msg.headers[:content_type]
     assert_equal "+OK", msg.headers[:reply_text]
   end
 
-  def test_read_message_with_content
+  def test_receive_data_with_content
     body = "Event-Name: HEARTBEAT"
     @write_io.write "Content-Length: #{body.size}\n\n#{body}\n\n"
     @write_io.close
 
-    msg = @connection.read_message
+    msg = @connection.receive_data
     assert_instance_of Librevox::Protocol::Response, msg
     assert_equal body.size.to_s, msg.headers[:content_length]
     assert_equal "HEARTBEAT", msg.content[:event_name]
   end
 
-  def test_read_multiple_messages
+  def test_receives_multiple_messages
     @write_io.write "Content-Type: command/reply\n\n"
     @write_io.write "Content-Type: api/response\n\n"
     @write_io.close
 
-    msg1 = @connection.read_message
+    msg1 = @connection.receive_data
     assert_equal "command/reply", msg1.headers[:content_type]
 
-    msg2 = @connection.read_message
+    msg2 = @connection.receive_data
     assert_equal "api/response", msg2.headers[:content_type]
   end
 
   def test_eof_returns_nil
     @write_io.close
 
-    assert_nil @connection.read_message
+    assert_nil @connection.receive_data
   end
 
   def test_skips_empty_header_blocks_after_content
@@ -60,14 +60,14 @@ class ProtocolConnectionTest < Minitest::Test
     @write_io.write "Content-Length: #{body.size}\n\n#{body}\n\n"
     @write_io.close
 
-    msg = @connection.read_message
+    msg = @connection.receive_data
     assert_equal "TEST", msg.content[:event_name]
 
     # The trailing \n\n after content creates an empty block which should be skipped
-    assert_nil @connection.read_message
+    assert_nil @connection.receive_data
   end
 
-  def test_read_loop_yields_each_message
+  def test_read_loop_yields_each_response
     @write_io.write "Content-Type: command/reply\n\n"
     @write_io.write "Content-Type: api/response\n\n"
     @write_io.close
@@ -80,11 +80,11 @@ class ProtocolConnectionTest < Minitest::Test
     assert_equal "api/response", messages[1].headers[:content_type]
   end
 
-  def test_send_message_writes_with_terminator
+  def test_send_data_writes_with_terminator
     write_stream = IO::Stream(@write_io)
     conn = Librevox::Protocol::Connection.new(write_stream)
 
-    conn.send_message("auth ClueCon")
+    conn.send_data("auth ClueCon")
     write_stream.close
 
     assert_equal "auth ClueCon\n\n", @read_io.read

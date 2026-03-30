@@ -17,7 +17,7 @@ module Librevox::Test
       assert_nil obj.outgoing_data.shift
     end
 
-    def assert_send_application(obj, app, args = nil, **params)
+    def assert_execute_app(obj, app, uuid, args = nil, **params)
       headers = params
         .merge(
           event_lock:       true,
@@ -27,15 +27,7 @@ module Librevox::Test
         )
         .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
 
-      assert_equal "sendmsg\n#{headers.join("\n")}", obj.outgoing_data.shift
-    end
-
-    def assert_update_session(obj, session_id = nil)
-      if session_id
-        assert_equal "api uuid_dump #{session_id}", obj.outgoing_data.shift
-      else
-        assert_match(/^api uuid_dump \d+/, obj.outgoing_data.shift)
-      end
+      assert_equal "sendmsg #{uuid}\n#{headers.join("\n")}", obj.outgoing_data.shift
     end
   end
 
@@ -61,7 +53,7 @@ module Librevox::Test
       headers["Content-Length"] = body.size if body
       header_str = headers.map {|k, v| "#{k}: #{v}"}.join("\n")
 
-      @listener.receive_message(Librevox::Protocol::Response.new(header_str, body.to_s))
+      @listener.receive_data(Librevox::Protocol::Response.new(header_str, body.to_s))
       yield_to_fibers
     end
 
@@ -69,7 +61,7 @@ module Librevox::Test
       body    = "Event-Name: #{name}"
       headers = "Content-Type: text/event-plain\nContent-Length: #{body.size}"
 
-      @listener.receive_message(Librevox::Protocol::Response.new(headers, body))
+      @listener.receive_data(Librevox::Protocol::Response.new(headers, body))
       yield_to_fibers
     end
 
@@ -81,7 +73,7 @@ module Librevox::Test
       body_str = body.map {|k,v| "#{k}: #{v}"}.join("\n")
       headers = "Content-Type: text/event-plain\nContent-Length: #{body_str.size}"
 
-      @listener.receive_message(Librevox::Protocol::Response.new(headers, body_str))
+      @listener.receive_data(Librevox::Protocol::Response.new(headers, body_str))
       yield_to_fibers
     end
 
@@ -92,7 +84,7 @@ module Librevox::Test
     end
   end
 
-  # Wraps each test method in Async { } so queue operations work.
+  # Wraps each test method in Async { } so promise operations work.
   module AsyncTest
     def run(...)
       Sync do

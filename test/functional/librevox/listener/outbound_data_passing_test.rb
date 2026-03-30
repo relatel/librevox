@@ -4,8 +4,7 @@ require_relative '../../../test_helper'
 
 require 'librevox/listener/outbound'
 
-class OutboundListenerWithNonNestedApps < Librevox::Listener::Outbound
-  attr_reader :queue
+class OutboundListenerWithDataPassing < Librevox::Listener::Outbound
   def session_initiated
     sample_app "foo"
     data = reader_app
@@ -13,33 +12,27 @@ class OutboundListenerWithNonNestedApps < Librevox::Listener::Outbound
   end
 end
 
-class TestOutboundListenerWithNonNestedApps < Minitest::Test
+class TestOutboundDataPassing < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
   def setup
-    @listener = OutboundListenerWithNonNestedApps.new(MockConnection.new)
-    @session_task = Async { @listener.run_session }
-
-    command_reply "Session-Var" => "First",
-                  "Unique-ID"   => "1234"
-    event_and_linger_replies
-    3.times {@listener.outgoing_data.shift}
+    setup_outbound OutboundListenerWithDataPassing
   end
 
   def teardown
-    @session_task&.stop
+    teardown_outbound
     super
   end
 
-  def test_wait_for_execute_complete_before_calling_next_app
-    assert_send_application @listener, "foo"
+  def test_passes_data_between_sequential_apps
+    assert_execute_app @listener, "foo", "1234"
     execute_complete "Unique-ID" => "1234"
 
-    assert_send_application @listener, "reader_app"
-    execute_complete "variable_app_var" => "Second"
+    assert_execute_app @listener, "reader_app", "1234"
+    execute_complete "variable_app_var" => "Second", "Unique-ID" => "1234"
 
-    assert_send_application @listener, "send", "the end: Second"
+    assert_execute_app @listener, "send", "1234", "the end: Second"
   end
 end

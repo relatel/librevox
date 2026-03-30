@@ -26,24 +26,17 @@ class TestOutboundApplicationError < Minitest::Test
   include Librevox::Test::Matchers
 
   def setup
-    @listener = OutboundListenerWithErrorApp.new(MockConnection.new)
-    @session_task = Async { @listener.run_session }
-
-    command_reply "Establish-Session" => "OK",
-                  "Unique-ID"         => "1234"
-    event_and_linger_replies
-    3.times { @listener.outgoing_data.shift }
+    setup_outbound OutboundListenerWithErrorApp
   end
 
   def teardown
-    @session_task&.stop
+    teardown_outbound
     super
   end
 
   def test_application_raises_on_error_reply
-    assert_send_application @listener, "fail"
+    assert_execute_app @listener, "fail", "1234"
 
-    # sendmsg ack with error — raises instead of blocking on app_complete_queue
     command_reply "Reply-Text" => "-ERR invalid command"
 
     assert_instance_of Librevox::ResponseError, @listener.error
@@ -56,36 +49,20 @@ class TestOutboundUnhandledApplicationError < Minitest::Test
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
-  def setup
-    @listener = OutboundListenerWithUnhandledErrorApp.new(MockConnection.new)
-    @session_task = Async { @listener.run_session }
+  def test_unhandled_error_propagates
+    setup_outbound OutboundListenerWithUnhandledErrorApp
 
-    command_reply "Establish-Session" => "OK",
-                  "Unique-ID"         => "1234"
-    event_and_linger_replies
-    3.times { @listener.outgoing_data.shift }
-  end
+    assert_execute_app @listener, "fail", "1234"
 
-  def teardown
-    @session_task&.stop
-    super
-  end
-
-  def test_unhandled_error_ends_session_cleanly
-    assert_send_application @listener, "fail"
-
-    log = StringIO.new
-    original_logger = Librevox.logger
-    Librevox.logger = Logger.new(log)
-
-    # sendmsg ack with error — run_session rescues and logs, no crash
-    command_reply "Reply-Text" => "-ERR invalid command"
-
-    # session task completes without raising
-    @session_task.wait
-
-    assert_match(/-ERR invalid command/, log.string)
-  ensure
-    Librevox.logger = original_logger
+    # Send error reply and wait on task without yielding in between,
+    # so async doesn't log an unhandled exception warning.
+    error_reply = Librevox::Protocol::Response.new(
+      "Content-Type: command/reply\nReply-Text: -ERR invalid command", ""
+    )
+    error = assert_raises(Librevox::ResponseError) do
+      @listener.receive_data(error_reply)
+      @session_task.wait
+    end
+    assert_equal "-ERR invalid command", error.message
   end
 end

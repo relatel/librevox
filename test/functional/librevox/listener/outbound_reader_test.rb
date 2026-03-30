@@ -11,41 +11,34 @@ class OutboundListenerWithReader < Librevox::Listener::Outbound
   end
 end
 
-class TestOutboundListenerWithAppReadingData < Minitest::Test
+class TestOutboundAppReadingData < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
   def setup
-    @listener = OutboundListenerWithReader.new(MockConnection.new)
-    @session_task = Async { @listener.run_session }
-
-    command_reply "Session-Var" => "First",
-                  "Unique-ID"   => "1234"
-    event_and_linger_replies
-    3.times {@listener.outgoing_data.shift}
-
-    assert_send_application @listener, "reader_app"
+    setup_outbound OutboundListenerWithReader
+    assert_execute_app @listener, "reader_app", "1234"
   end
 
   def teardown
-    @session_task&.stop
+    teardown_outbound
     super
   end
 
-  def test_not_send_anything_while_missing_response
+  def test_blocks_until_execute_complete
     assert_send_nothing @listener
   end
 
-  def test_update_session_from_execute_complete
+  def test_updates_session_from_execute_complete
     execute_complete "Session-Var" => "Second"
 
     assert_equal "Second", @listener.session[:session_var]
   end
 
-  def test_return_value_of_channel_variable
-    execute_complete "variable_app_var" => "Second"
+  def test_returns_channel_variable_value
+    execute_complete "variable_app_var" => "Second", "Unique-ID" => "1234"
 
-    assert_send_application @listener, "send", "Second"
+    assert_execute_app @listener, "send", "1234", "Second"
   end
 end
