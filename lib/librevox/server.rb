@@ -1,10 +1,16 @@
 # frozen_string_literal: true
 
 require 'io/stream'
+require 'io/endpoint/host_endpoint'
 
 module Librevox
   class Server
     attr :endpoint
+
+    def self.start(handler, host: "localhost", port: 8084, **options)
+      endpoint = IO::Endpoint.tcp(host, port, **options)
+      new(handler, endpoint).run
+    end
 
     def initialize(handler, endpoint, **options)
       @handler = handler

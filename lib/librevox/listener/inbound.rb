@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'io/endpoint/host_endpoint'
-
 module Librevox
   module Listener
     class Inbound < Base
@@ -18,10 +16,8 @@ module Librevox
         end
       end
 
-      def self.run(barrier, host: "localhost", port: 8021, **options)
-        endpoint = IO::Endpoint.tcp(host, port)
-        client = Client.new(self, endpoint, **options)
-        barrier.async { client.run }
+      def self.start(...)
+        Client.start(self, ...)
       end
 
       def initialize(connection, args = {})

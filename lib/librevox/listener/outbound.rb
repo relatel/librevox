@@ -1,16 +1,12 @@
 # frozen_string_literal: true
 
-require 'io/endpoint/host_endpoint'
-
 module Librevox
   module Listener
     class Outbound < Base
       include Librevox::Applications
 
-      def self.run(barrier, host: "localhost", port: 8084, **options)
-        endpoint = IO::Endpoint.tcp(host, port, **options)
-        server = Server.new(self, endpoint)
-        barrier.async { server.run }
+      def self.start(...)
+        Server.start(self, ...)
       end
 
       attr_accessor :session
