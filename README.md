@@ -245,7 +245,7 @@ finished. Application completion is signalled by a `CHANNEL_EXECUTE_COMPLETE`
 event:
 
 ```
-Listener → FS:  sendmsg
+Listener → FS:  sendmsg <uuid>
                 call-command: execute
                 execute-app-name: playback
                 execute-app-arg: welcome.wav
@@ -270,18 +270,19 @@ being processed until the current application completes.
 
 ### Two fibers per connection
 
-Librevox runs two fibers for each outbound connection:
+Librevox runs two fibers for each connection:
 
 - **Session fiber** (`run_session`) — runs the setup sequence and then
-  `session_initiated`. Each `send_message` or `application` call blocks the fiber
-  until the reply arrives.
-- **Read fiber** (`read_loop`) — reads messages from the socket and dispatches
-  them to `Async::Queue` instances, waking the session fiber.
+  `session_initiated`. Each `send_message` or `application` call creates an
+  `Async::Promise`, pushes it onto an array, and blocks the fiber until the
+  promise is resolved.
+- **Read fiber** (`read_loop`) — reads messages from the socket and resolves
+  promises in FIFO order, waking the session fiber.
 
-An `Async::Semaphore(1)` mutex on `send_message` ensures only one command is
-in-flight at a time, so replies are always delivered to the correct caller.
-This also serializes commands issued by event hooks (which run in their own
-fibers) with the main session flow.
+No mutex is needed — Ruby's cooperative fiber scheduling guarantees that the
+promise push happens before the I/O yield point (the socket write), so
+interleaving from concurrent event-hook fibers is safe. When a connection
+drops, pending promises are rejected with `ConnectionError`.
 
 ## API Documentation
 
