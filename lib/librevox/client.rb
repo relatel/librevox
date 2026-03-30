@@ -21,7 +21,7 @@ module Librevox
     def run
       loop do
         @endpoint.connect(&method(:connect))
-      rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET, ConnectionError => e
+      rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET, ConnectionError, ResponseError => e
         Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
         sleep 1
       end
@@ -44,17 +44,17 @@ module Librevox
       Async do
         read_messages(connection, listener)
       ensure
-        # Close queues here (not in handle_session's ensure) so that
-        # a connection drop unblocks listener.run_session via nil dequeue.
+        # Reject pending promises here (not in handle_session's ensure) so
+        # that a connection drop unblocks listener.run_session via rejection.
         # handle_session's ensure can't run until run_session returns,
-        # creating a deadlock if queues aren't closed from this fiber.
+        # creating a deadlock if promises aren't rejected from this fiber.
         listener.connection_closed
       end
     end
 
     def read_messages(connection, listener)
       connection.read_loop do |msg|
-        listener.receive_message(msg)
+        listener.receive_data(msg)
       end
     end
   end

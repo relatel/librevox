@@ -9,6 +9,7 @@ module Librevox
 
   autoload :Client, 'librevox/client'
   autoload :CommandSocket, 'librevox/command_socket'
+  autoload :CommandDelegate, 'librevox/command_delegate'
   autoload :Commands, 'librevox/commands'
   autoload :Applications, 'librevox/applications'
   autoload :Runner, 'librevox/runner'

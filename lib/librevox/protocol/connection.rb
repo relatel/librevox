@@ -7,7 +7,7 @@ module Librevox
         @stream = stream
       end
 
-      def read_message
+      def receive_data
         loop do
           headers = @stream.read_until("\n\n")
           return nil if headers.nil?
@@ -25,12 +25,12 @@ module Librevox
       end
 
       def read_loop
-        while (msg = read_message)
+        while (msg = receive_data)
           yield msg
         end
       end
 
-      def send_message(msg)
+      def send_data(msg)
         @stream.write("#{msg}\n\n")
         @stream.flush
       end

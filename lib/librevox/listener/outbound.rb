@@ -13,42 +13,11 @@ module Librevox
         barrier.async { server.run }
       end
 
-      def application(app, args = nil, **params)
-        variable_name = params.delete(:variable)
-
-        headers = params
-          .merge(
-            event_lock:        true,
-            call_command:      "execute",
-            execute_app_name:  app,
-            execute_app_arg:   args,
-          )
-          .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
-
-        send_message "sendmsg\n#{headers.join("\n")}"
-
-        response = @app_complete_queue.dequeue
-
-        if response.nil?
-          raise ConnectionError, "Connection closed"
-        end
-
-        @session = response.content
-
-        variable(variable_name) if variable_name
-      end
-
       attr_accessor :session
-
-      # Called when a new session is initiated.
-      def session_initiated
-      end
 
       def initialize(connection, options = {})
         super(connection)
-
         @session = nil
-        @app_complete_queue = Async::Queue.new
       end
 
       def run_session
@@ -58,33 +27,32 @@ module Librevox
         send_message "linger"
 
         session_initiated
-      rescue ResponseError, ConnectionError, IOError, Errno::EPIPE => e
-        Librevox.logger.error "Session error: #{e.message}"
       end
 
-      def connection_closed
-        super
-
-        @app_complete_queue.close
+      # Called when a new session is initiated.
+      def session_initiated
       end
 
-      def handle_response
-        if response.event? && response.event == "CHANNEL_DATA"
-          @session = response.content
-        elsif response.event? && response.event == "CHANNEL_EXECUTE_COMPLETE"
-          @app_complete_queue.push(response)
-        end
+      def application(app, args = nil, **params)
+        variable_name = params.delete(:variable)
 
-        super
+        response = execute_app(app, session[:unique_id], args, **params)
+
+        @session = response.content
+
+        variable(variable_name) if variable_name
       end
 
       def variable(name)
         session[:"variable_#{name}"]
       end
 
-      def update_session
-        response = api.command "uuid_dump", session[:unique_id]
-        @session = response.content
+      def receive_data(response)
+        if response.event? && response.event == "CHANNEL_DATA"
+          @session = response.content
+        end
+
+        super
       end
     end
   end
