@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'async/barrier'
+require 'securerandom'
 
 module Librevox
   module Listener
@@ -46,19 +47,22 @@ module Librevox
       end
 
       def execute_app(app, uuid, args = nil, **params)
-        headers = params
-          .merge(
+        event_uuid = SecureRandom.uuid
+
+        headers = {
             event_lock:        true,
             call_command:      "execute",
             execute_app_name:  app,
             execute_app_arg:   args,
-          )
+            event_uuid:        event_uuid,
+          }
+          .merge(params)
           .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
 
         send_message "sendmsg #{uuid}\n#{headers.join("\n")}"
 
         promise = Async::Promise.new
-        @app_promises[uuid] = promise
+        @app_promises[event_uuid] = promise
         promise.wait
       end
 
@@ -70,8 +74,8 @@ module Librevox
 
         if response.event?
           if response.event == "CHANNEL_EXECUTE_COMPLETE"
-            uuid = response.content[:unique_id]
-            @app_promises.delete(uuid)&.resolve(response)
+            app_uuid = response.content[:application_uuid]
+            @app_promises.delete(app_uuid)&.resolve(response)
           end
 
           @event_barrier.async do

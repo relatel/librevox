@@ -18,16 +18,20 @@ module Librevox::Test
     end
 
     def assert_execute_app(obj, app, uuid, args = nil, **params)
-      headers = params
-        .merge(
-          event_lock:       true,
-          call_command:     "execute",
-          execute_app_name: app,
-          execute_app_arg:  args,
-        )
-        .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
+      data = obj.outgoing_data.shift
+      assert data, "Expected sendmsg in outgoing data"
 
-      assert_equal "sendmsg #{uuid}\n#{headers.join("\n")}", obj.outgoing_data.shift
+      @last_event_uuid = data[/event-uuid: (.+)/, 1]
+      assert @last_event_uuid, "Expected event-uuid header in sendmsg"
+
+      assert_match(/\Asendmsg #{uuid}\n/, data)
+      assert_match(/execute-app-name: #{app}/, data)
+      assert_match(/execute-app-arg: #{args}/, data) if args
+
+      params.each do |key, value|
+        header = "#{key.to_s.tr('_', '-')}: #{value}"
+        assert_match(/#{Regexp.escape(header)}/, data)
+      end
     end
   end
 
@@ -69,7 +73,9 @@ module Librevox::Test
       # sendmsg ack — always arrives before CHANNEL_EXECUTE_COMPLETE
       command_reply "Reply-Text" => "+OK"
 
-      body = {"Event-Name" => "CHANNEL_EXECUTE_COMPLETE"}.merge(args)
+      # Use the event-uuid from the last assert_execute_app, echoing it
+      # back as Application-UUID just like FreeSWITCH would.
+      body = {"Event-Name" => "CHANNEL_EXECUTE_COMPLETE", "Application-UUID" => @last_event_uuid}.merge(args)
       body_str = body.map {|k,v| "#{k}: #{v}"}.join("\n")
       headers = "Content-Type: text/event-plain\nContent-Length: #{body_str.size}"
 

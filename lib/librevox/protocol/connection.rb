@@ -31,8 +31,7 @@ module Librevox
       end
 
       def send_data(msg)
-        @stream.write("#{msg}\n\n")
-        @stream.flush
+        @stream.write("#{msg}\n\n", flush: true)
       end
 
       def close_write
@@ -42,8 +41,6 @@ module Librevox
       end
 
       def close
-        return if @stream.closed?
-
         @stream.close
       rescue Errno::EPIPE, Errno::ECONNRESET
         # Remote end already closed
