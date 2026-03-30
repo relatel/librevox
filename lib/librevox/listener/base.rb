@@ -18,7 +18,7 @@ module Librevox
       def initialize(connection)
         @connection = connection
         @reply_promises = []
-        @app_promises = []
+        @app_promises = {}
         @event_barrier = Async::Barrier.new
       end
 
@@ -58,7 +58,7 @@ module Librevox
         send_message "sendmsg #{uuid}\n#{headers.join("\n")}"
 
         promise = Async::Promise.new
-        @app_promises << promise
+        @app_promises[uuid] = promise
         promise.wait
       end
 
@@ -70,7 +70,8 @@ module Librevox
 
         if response.event?
           if response.event == "CHANNEL_EXECUTE_COMPLETE"
-            @app_promises.shift&.resolve(response)
+            uuid = response.content[:unique_id]
+            @app_promises.delete(uuid)&.resolve(response)
           end
 
           @event_barrier.async do
@@ -84,7 +85,7 @@ module Librevox
         error = ConnectionError.new("Connection closed")
 
         @reply_promises.each { |p| p.reject(error) }
-        @app_promises.each { |p| p.reject(error) }
+        @app_promises.each_value { |p| p.reject(error) }
 
         @reply_promises.clear
         @app_promises.clear

@@ -31,7 +31,7 @@ class TestOutboundAppReadingData < Minitest::Test
   end
 
   def test_updates_session_from_execute_complete
-    execute_complete "Session-Var" => "Second"
+    execute_complete "Session-Var" => "Second", "Unique-ID" => "1234"
 
     assert_equal "Second", @listener.session[:session_var]
   end
