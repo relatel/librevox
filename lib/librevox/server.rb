@@ -8,8 +8,8 @@ module Librevox
     attr :endpoint
 
     def self.start(handler, host: "localhost", port: 8084, **options)
-      endpoint = IO::Endpoint.tcp(host, port, **options)
-      new(handler, endpoint).run
+      endpoint = IO::Endpoint.tcp(host, port)
+      new(handler, endpoint, **options).run
     end
 
     def initialize(handler, endpoint, **options)

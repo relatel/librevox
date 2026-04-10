@@ -38,13 +38,13 @@ module Librevox
     end
 
     def application(app, uuid, args = nil, **params)
-      headers = params
-        .merge(
+      headers = {
           event_lock:       true,
           call_command:     "execute",
           execute_app_name: app,
           execute_app_arg:  args,
-        )
+        }
+        .merge(params)
         .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
 
       send_message "sendmsg #{uuid}\n#{headers.join("\n")}"
