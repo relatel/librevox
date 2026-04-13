@@ -59,10 +59,11 @@ module Librevox
           .merge(params)
           .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
 
-        send_message "sendmsg #{uuid}\n#{headers.join("\n")}"
-
         promise = Async::Promise.new
         @app_promises[event_uuid] = promise
+
+        send_message "sendmsg #{uuid}\n#{headers.join("\n")}"
+
         promise.wait
       end
 
