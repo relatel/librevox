@@ -14,6 +14,7 @@ module Librevox
   autoload :Applications, 'librevox/applications'
   autoload :Runner, 'librevox/runner'
   autoload :Server, 'librevox/server'
+  autoload :Session, 'librevox/session'
 
   module Protocol
     autoload :Connection, 'librevox/protocol/connection'

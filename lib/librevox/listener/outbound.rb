@@ -14,6 +14,8 @@ module Librevox
       def initialize(connection, options = {})
         super(connection)
         @session = nil
+        @disconnecting = false
+        @hung_up = false
       end
 
       def run_session
@@ -43,12 +45,22 @@ module Librevox
         session[:"variable_#{name}"]
       end
 
+      # FreeSWITCH signals end-of-session with disconnect-notice + a final
+      # CHANNEL_HANGUP_COMPLETE event. Either may arrive first. Once both
+      # have been seen #session_complete? returns true and Session exits
+      # the reader loop — after any in-flight event hooks have drained.
       def receive_data(response)
-        if response.event? && response.event == "CHANNEL_DATA"
-          @session = response.content
+        if response.disconnect_notice?
+          @disconnecting = true
+        else
+          @session = response.content if response.event? && response.event == "CHANNEL_DATA"
+          super
+          @hung_up = true if response.event? && response.event == "CHANNEL_HANGUP_COMPLETE"
         end
+      end
 
-        super
+      def session_complete?
+        @disconnecting && @hung_up
       end
     end
   end

@@ -104,6 +104,13 @@ module Librevox
         @connection&.close_write
       end
 
+      # Overridden by listeners that drive their own end-of-session criteria
+      # (e.g. Outbound waits for disconnect-notice + CHANNEL_HANGUP_COMPLETE).
+      # Session checks this after each message and stops the reader when true.
+      def session_complete?
+        false
+      end
+
       private
 
       def on_event(event)

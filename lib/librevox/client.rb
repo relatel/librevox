@@ -16,17 +16,9 @@ module Librevox
       @options = options
     end
 
-    def connect(socket)
-      stream = IO::Stream(socket)
-      connection = Protocol::Connection.new(stream)
-      listener = @handler.new(connection, @options)
-
-      handle_session(connection, listener)
-    end
-
     def run
       loop do
-        @endpoint.connect(&method(:connect))
+        @endpoint.connect { |socket| start_session(socket) }
       rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET, ConnectionError, ResponseError => e
         Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
         sleep 1
@@ -35,35 +27,10 @@ module Librevox
 
     private
 
-    def handle_session(connection, listener)
-      read_task = start_read_loop(connection, listener)
-
-      listener.run_session
-
-      read_task.wait
-    rescue ConnectionError
-      # Expected when the connection drops
-    ensure
-      read_task&.stop
-      connection.close
-    end
-
-    def start_read_loop(connection, listener)
-      Async do
-        read_messages(connection, listener)
-      ensure
-        # Reject pending promises here (not in handle_session's ensure) so
-        # that a connection drop unblocks listener.run_session via rejection.
-        # handle_session's ensure can't run until run_session returns,
-        # creating a deadlock if promises aren't rejected from this fiber.
-        listener.connection_closed
-      end
-    end
-
-    def read_messages(connection, listener)
-      connection.read_loop do |msg|
-        listener.receive_data(msg)
-      end
+    def start_session(socket)
+      connection = Protocol::Connection.new(IO::Stream(socket))
+      listener = @handler.new(connection, @options)
+      Session.new(connection, listener).run
     end
   end
 end
