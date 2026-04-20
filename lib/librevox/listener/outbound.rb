@@ -11,7 +11,7 @@ module Librevox
 
       attr_accessor :session
 
-      def initialize(connection, options = {})
+      def initialize(connection, **)
         super(connection)
         @session = nil
         @disconnecting = false
@@ -49,7 +49,7 @@ module Librevox
       # CHANNEL_HANGUP_COMPLETE event. Either may arrive first. Once both
       # have been seen #session_complete? returns true and Session exits
       # the reader loop — after any in-flight event hooks have drained.
-      def receive_data(response)
+      def receive_message(response)
         if response.disconnect_notice?
           @disconnecting = true
         else

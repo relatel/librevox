@@ -60,7 +60,7 @@ class TestOutboundUnhandledApplicationError < Minitest::Test
       "Content-Type: command/reply\nReply-Text: -ERR invalid command", ""
     )
     error = assert_raises(Librevox::ResponseError) do
-      @listener.receive_data(error_reply)
+      @listener.receive_message(error_reply)
       @session_task.wait
     end
     assert_equal "-ERR invalid command", error.message

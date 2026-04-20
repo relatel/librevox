@@ -57,7 +57,7 @@ module Librevox::Test
       headers["Content-Length"] = body.size if body
       header_str = headers.map {|k, v| "#{k}: #{v}"}.join("\n")
 
-      @listener.receive_data(Librevox::Protocol::Response.new(header_str, body.to_s))
+      @listener.receive_message(Librevox::Protocol::Response.new(header_str, body.to_s))
       yield_to_fibers
     end
 
@@ -65,7 +65,7 @@ module Librevox::Test
       body    = "Event-Name: #{name}"
       headers = "Content-Type: text/event-plain\nContent-Length: #{body.size}"
 
-      @listener.receive_data(Librevox::Protocol::Response.new(headers, body))
+      @listener.receive_message(Librevox::Protocol::Response.new(headers, body))
       yield_to_fibers
     end
 
@@ -79,7 +79,7 @@ module Librevox::Test
       body_str = body.map {|k,v| "#{k}: #{v}"}.join("\n")
       headers = "Content-Type: text/event-plain\nContent-Length: #{body_str.size}"
 
-      @listener.receive_data(Librevox::Protocol::Response.new(headers, body_str))
+      @listener.receive_message(Librevox::Protocol::Response.new(headers, body_str))
       yield_to_fibers
     end
 

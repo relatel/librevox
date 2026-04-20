@@ -48,10 +48,6 @@ module Librevox
     logger
   end
 
-  def self.reopen_log
-    @logger = logger!
-  end
-
   # Start a single listener:
   #
   #   Librevox.start MyInbound

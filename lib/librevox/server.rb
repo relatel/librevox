@@ -19,19 +19,17 @@ module Librevox
     end
 
     def run
-      @endpoint.accept do |socket, _address|
-        start_session(socket)
-      rescue => e
-        Librevox.logger.error "Session error: #{e.full_message}"
-      end
+      @endpoint.accept(&method(:accept))
     end
 
     private
 
-    def start_session(socket)
+    def accept(socket, _address)
       connection = Protocol::Connection.new(IO::Stream(socket))
-      listener = @handler.new(connection, @options)
+      listener = @handler.new(connection, **@options)
       Session.new(connection, listener).run
+    rescue => e
+      Librevox.logger.error "Session error: #{e.full_message}"
     end
   end
 end

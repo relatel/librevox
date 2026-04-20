@@ -20,10 +20,10 @@ module Librevox
         Client.start(self, ...)
       end
 
-      def initialize(connection, args = {})
+      def initialize(connection, auth: "ClueCon", **)
         super(connection)
 
-        @auth = args[:auth] || "ClueCon"
+        @auth = auth
       end
 
       def run_session

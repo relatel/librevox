@@ -67,7 +67,7 @@ module Librevox
         promise.wait
       end
 
-      def receive_data(response)
+      def receive_message(response)
         if response.reply?
           @reply_promises.shift&.resolve(response)
           return

@@ -7,12 +7,12 @@ module Librevox
   class CommandSocket
     include Librevox::Commands
 
-    def initialize(args = {})
-      @server   = args[:server] || "127.0.0.1"
-      @port     = args[:port] || "8021"
-      @auth     = args[:auth] || "ClueCon"
+    def initialize(server: "127.0.0.1", port: "8021", auth: "ClueCon", connect: true)
+      @server = server
+      @port   = port
+      @auth   = auth
 
-      connect unless args[:connect] == false
+      self.connect if connect
     end
 
     def connect

@@ -28,8 +28,8 @@ module Librevox
     # ensure can't fire until run_session returns — that would deadlock.
     def start_reader
       Async do
-        @connection.read_loop do |msg|
-          @listener.receive_data(msg)
+        @connection.each_message do |msg|
+          @listener.receive_message(msg)
           break if @listener.session_complete?
         end
       ensure

@@ -212,8 +212,6 @@ Librevox.options[:log_file]  = "librevox.log"  # default: STDOUT
 Librevox.options[:log_level] = Logger::DEBUG    # default: Logger::INFO
 ```
 
-When started with `Librevox.start`, sending `SIGHUP` to the process reopens the log file, making it compatible with `logrotate(1)`.
-
 ## Event Socket Protocol
 
 Understanding the outbound event socket protocol is important for working on
@@ -276,7 +274,7 @@ Librevox runs two fibers for each connection:
   `session_initiated`. Each `send_message` or `application` call creates an
   `Async::Promise`, pushes it onto an array, and blocks the fiber until the
   promise is resolved.
-- **Read fiber** (`read_loop`) — reads messages from the socket and resolves
+- **Read fiber** (`each_message`) — reads messages from the socket and resolves
   promises in FIFO order, waking the session fiber.
 
 No mutex is needed — Ruby's cooperative fiber scheduling guarantees that the

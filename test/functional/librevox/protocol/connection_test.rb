@@ -67,13 +67,13 @@ class ProtocolConnectionTest < Minitest::Test
     assert_nil @connection.receive_data
   end
 
-  def test_read_loop_yields_each_response
+  def test_each_message_yields_each_response
     @write_io.write "Content-Type: command/reply\n\n"
     @write_io.write "Content-Type: api/response\n\n"
     @write_io.close
 
     messages = []
-    @connection.read_loop { |msg| messages << msg }
+    @connection.each_message { |msg| messages << msg }
 
     assert_equal 2, messages.size
     assert_equal "command/reply", messages[0].headers[:content_type]

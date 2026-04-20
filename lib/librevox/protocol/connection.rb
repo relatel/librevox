@@ -24,7 +24,9 @@ module Librevox
         end
       end
 
-      def read_loop
+      def each_message
+        return enum_for(:each_message) unless block_given?
+
         while (msg = receive_data)
           yield msg
         end
@@ -36,14 +38,14 @@ module Librevox
 
       def close_write
         @stream.close_write
-      rescue IOError, Errno::ENOTCONN
-        # Already closed or not connected
+      rescue IOError, Errno::EPIPE, Errno::ECONNRESET, Errno::ENOTCONN
+        # Already closed or remote hung up.
       end
 
       def close
         @stream.close
-      rescue Errno::EPIPE, Errno::ECONNRESET
-        # Remote end already closed
+      rescue IOError, Errno::EPIPE, Errno::ECONNRESET, Errno::ENOTCONN
+        # Already closed or remote hung up.
       end
     end
   end
