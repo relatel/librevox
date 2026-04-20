@@ -25,8 +25,6 @@ module Librevox
       end
 
       def each_message
-        return enum_for(:each_message) unless block_given?
-
         while (msg = receive_data)
           yield msg
         end

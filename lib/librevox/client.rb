@@ -19,7 +19,7 @@ module Librevox
     def run
       loop do
         @endpoint.connect(&method(:connect))
-      rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET, ConnectionError, ResponseError => e
+      rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET, ResponseError => e
         Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
         sleep 1
       end

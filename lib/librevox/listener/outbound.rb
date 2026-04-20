@@ -53,9 +53,9 @@ module Librevox
         if response.disconnect_notice?
           @disconnecting = true
         else
-          @session = response.content if response.event? && response.event == "CHANNEL_DATA"
+          @session = response.content if response.event == "CHANNEL_DATA"
           super
-          @hung_up = true if response.event? && response.event == "CHANNEL_HANGUP_COMPLETE"
+          @hung_up = true if response.event == "CHANNEL_HANGUP_COMPLETE"
         end
       end
 

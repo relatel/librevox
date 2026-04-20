@@ -5,7 +5,7 @@ require 'io/endpoint/host_endpoint'
 
 module Librevox
   class Server
-    attr :endpoint
+    attr_reader :endpoint
 
     def self.start(handler, host: "localhost", port: 8084, **options)
       endpoint = IO::Endpoint.tcp(host, port)
@@ -29,7 +29,7 @@ module Librevox
       listener = @handler.new(connection, **@options)
       Session.new(connection, listener).run
     rescue => e
-      Librevox.logger.error "Session error: #{e.full_message}"
+      Librevox.logger.error "Session error: #{e.message}"
     end
   end
 end
