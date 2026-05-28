@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'async/barrier'
+require 'async/semaphore'
 require 'securerandom'
 
 module Librevox
@@ -21,6 +22,7 @@ module Librevox
         @reply_promises = []
         @app_promises = {}
         @event_barrier = Async::Barrier.new
+        @write_lock = Async::Semaphore.new(1)
       end
 
       # Exposes an instance of {CommandDelegate}, which includes {Librevox::Commands}.
@@ -36,9 +38,14 @@ module Librevox
       def send_message(msg)
         promise = Async::Promise.new
 
-        @reply_promises << promise
-
-        @connection.send_data(msg)
+        # Serialize only the enqueue+send so the FIFO order of @reply_promises
+        # always matches the byte order on the wire, even when concurrent event
+        # hooks send commands. Must not cover promise.wait — holding the lock
+        # while awaiting a reply would deadlock every other sender.
+        @write_lock.acquire do
+          @reply_promises << promise
+          @connection.send_data(msg)
+        end
 
         reply = promise.wait
         raise ResponseError, reply.headers[:reply_text] if reply.error?
