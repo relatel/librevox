@@ -10,7 +10,7 @@ class TestListenerBase < Minitest::Test
     @listener = @class.new(MockConnection.new)
   end
 
-  # Without Async in handle_response, on_event calling api.* deadlocks the
+  # Without Async in receive_data, on_event calling api.* deadlocks the
   # calling fiber. A Thread timeout is the only way to detect this — all
   # Async fibers are stuck so Async-level timeouts can't fire.
   def test_on_event_with_api_does_not_block_handle_response

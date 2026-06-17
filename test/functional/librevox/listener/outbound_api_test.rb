@@ -12,33 +12,27 @@ class OutboundListenerWithAppsAndApi < Librevox::Listener::Outbound
   end
 end
 
-class TestOutboundListenerWithAppsAndApi < Minitest::Test
+class TestOutboundAppsAndApi < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
   def setup
-    @listener = OutboundListenerWithAppsAndApi.new(MockConnection.new)
-    @session_task = Async { @listener.run_session }
-
-    command_reply "Session-Var" => "First",
-                  "Unique-ID"   => "1234"
-    event_and_linger_replies
-    3.times {@listener.outgoing_data.shift}
+    setup_outbound OutboundListenerWithAppsAndApi
   end
 
   def teardown
-    @session_task&.stop
+    teardown_outbound
     super
   end
 
-  def test_wait_for_execute_complete_before_calling_next_app_or_cmd
-    assert_send_application @listener, "foo"
-    execute_complete
+  def test_waits_for_execute_complete_before_api_and_next_app
+    assert_execute_app @listener, "foo", "1234"
+    execute_complete "Unique-ID" => "1234"
 
     assert_send_command @listener, "api bar"
     api_response body: "+OK"
 
-    assert_send_application @listener, "baz"
+    assert_execute_app @listener, "baz", "1234"
   end
 end

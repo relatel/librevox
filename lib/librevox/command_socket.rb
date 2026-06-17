@@ -7,12 +7,12 @@ module Librevox
   class CommandSocket
     include Librevox::Commands
 
-    def initialize(args = {})
-      @server   = args[:server] || "127.0.0.1"
-      @port     = args[:port] || "8021"
-      @auth     = args[:auth] || "ClueCon"
+    def initialize(server: "127.0.0.1", port: "8021", auth: "ClueCon", connect: true)
+      @server = server
+      @port   = port
+      @auth   = auth
 
-      connect unless args[:connect] == false
+      self.connect if connect
     end
 
     def connect
@@ -23,7 +23,7 @@ module Librevox
     end
 
     def send_message(msg)
-      @connection.send_message(msg)
+      @connection.send_data(msg)
       read_response
     end
 
@@ -32,19 +32,19 @@ module Librevox
     end
 
     def read_response
-      while msg = @connection.read_message
+      while msg = @connection.receive_data
         return msg if msg.command_reply? || msg.api_response?
       end
     end
 
-    def application(uuid, app, args = nil, **params)
-      headers = params
-        .merge(
+    def application(app, uuid, args = nil, **params)
+      headers = {
           event_lock:       true,
           call_command:     "execute",
           execute_app_name: app,
           execute_app_arg:  args,
-        )
+        }
+        .merge(params)
         .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
 
       send_message "sendmsg #{uuid}\n#{headers.join("\n")}"

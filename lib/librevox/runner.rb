@@ -31,7 +31,9 @@ module Librevox
     end
 
     def run(klass, **args)
-      klass.run(@barrier, **args)
+      @barrier.async do
+        klass.start(**args)
+      end
     end
   end
 end

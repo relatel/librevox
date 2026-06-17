@@ -7,7 +7,7 @@ module Librevox
         @stream = stream
       end
 
-      def read_message
+      def receive_data
         loop do
           headers = @stream.read_until("\n\n")
           return nil if headers.nil?
@@ -24,29 +24,26 @@ module Librevox
         end
       end
 
-      def read_loop
-        while (msg = read_message)
+      def each_message
+        while (msg = receive_data)
           yield msg
         end
       end
 
-      def send_message(msg)
-        @stream.write("#{msg}\n\n")
-        @stream.flush
+      def send_data(msg)
+        @stream.write("#{msg}\n\n", flush: true)
       end
 
       def close_write
         @stream.close_write
-      rescue IOError, Errno::ENOTCONN
-        # Already closed or not connected
+      rescue IOError, Errno::EPIPE, Errno::ECONNRESET, Errno::ENOTCONN
+        # Already closed or remote hung up.
       end
 
       def close
-        return if @stream.closed?
-
         @stream.close
-      rescue Errno::EPIPE, Errno::ECONNRESET
-        # Remote end already closed
+      rescue IOError, Errno::EPIPE, Errno::ECONNRESET, Errno::ENOTCONN
+        # Already closed or remote hung up.
       end
     end
   end

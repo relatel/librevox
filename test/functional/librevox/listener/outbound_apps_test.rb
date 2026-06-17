@@ -4,7 +4,7 @@ require_relative '../../../test_helper'
 
 require 'librevox/listener/outbound'
 
-class OutboundListenerWithNestedApps < Librevox::Listener::Outbound
+class OutboundListenerWithSequentialApps < Librevox::Listener::Outbound
   def session_initiated
     sample_app "foo"
     sample_app "bar"
@@ -23,38 +23,32 @@ class OutboundListenerWithEventLockOverride < Librevox::Listener::Outbound
   end
 end
 
-class TestOutboundListenerWithApps < Minitest::Test
+class TestOutboundSequentialApps < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
   def setup
-    @listener = OutboundListenerWithNestedApps.new(MockConnection.new)
-    @session_task = Async { @listener.run_session }
-
-    command_reply "Establish-Session" => "OK",
-                  "Unique-ID"         => "1234"
-    event_and_linger_replies
-    3.times {@listener.outgoing_data.shift}
+    setup_outbound OutboundListenerWithSequentialApps
   end
 
   def teardown
-    @session_task&.stop
+    teardown_outbound
     super
   end
 
-  def test_only_send_one_app_at_a_time
-    assert_send_application @listener, "foo"
+  def test_sends_one_app_at_a_time
+    assert_execute_app @listener, "foo", "1234"
     assert_send_nothing @listener
 
-    execute_complete
+    execute_complete "Unique-ID" => "1234"
 
-    assert_send_application @listener, "bar"
+    assert_execute_app @listener, "bar", "1234"
     assert_send_nothing @listener
   end
 
-  def test_not_be_driven_forward_by_events
-    assert_send_application @listener, "foo"
+  def test_events_do_not_advance_app
+    assert_execute_app @listener, "foo", "1234"
 
     command_reply body: {
       "Event-Name"  => "CHANNEL_EXECUTE",
@@ -64,16 +58,16 @@ class TestOutboundListenerWithApps < Minitest::Test
     assert_send_nothing @listener
   end
 
-  def test_not_be_driven_forward_by_api_responses
-    assert_send_application @listener, "foo"
+  def test_api_responses_do_not_advance_app
+    assert_execute_app @listener, "foo", "1234"
 
     api_response body: "Foo"
 
     assert_send_nothing @listener
   end
 
-  def test_not_be_driven_forward_by_disconnect_notifications
-    assert_send_application @listener, "foo"
+  def test_disconnect_notices_do_not_advance_app
+    assert_execute_app @listener, "foo", "1234"
 
     response "Content-Type" => "text/disconnect-notice",
              body: "Lingering"
@@ -81,8 +75,8 @@ class TestOutboundListenerWithApps < Minitest::Test
     assert_send_nothing @listener
   end
 
-  def test_not_be_driven_forward_by_command_reply
-    assert_send_application @listener, "foo"
+  def test_command_replies_do_not_advance_app
+    assert_execute_app @listener, "foo", "1234"
 
     command_reply "Reply-Text" => "+OK"
 
@@ -90,52 +84,40 @@ class TestOutboundListenerWithApps < Minitest::Test
   end
 end
 
-class TestOutboundListenerWithCustomHeaders < Minitest::Test
+class TestOutboundCustomHeaders < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
   def setup
-    @listener = OutboundListenerWithCustomHeaders.new(MockConnection.new)
-    @session_task = Async { @listener.run_session }
-
-    command_reply "Establish-Session" => "OK",
-                  "Unique-ID"         => "1234"
-    event_and_linger_replies
-    3.times {@listener.outgoing_data.shift}
+    setup_outbound OutboundListenerWithCustomHeaders
   end
 
   def teardown
-    @session_task&.stop
+    teardown_outbound
     super
   end
 
   def test_sends_custom_headers
-    assert_send_application @listener, "playback", "/tmp/test.wav", loops: 3
+    assert_execute_app @listener, "playback", "1234", "/tmp/test.wav", loops: 3
   end
 end
 
-class TestOutboundListenerWithEventLockOverride < Minitest::Test
+class TestOutboundEventLockOverride < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
   include Librevox::Test::Matchers
 
   def setup
-    @listener = OutboundListenerWithEventLockOverride.new(MockConnection.new)
-    @session_task = Async { @listener.run_session }
-
-    command_reply "Establish-Session" => "OK",
-                  "Unique-ID"         => "1234"
-    event_and_linger_replies
-    3.times {@listener.outgoing_data.shift}
+    setup_outbound OutboundListenerWithEventLockOverride
   end
 
   def teardown
-    @session_task&.stop
+    teardown_outbound
     super
   end
 
   def test_overrides_event_lock
-    assert_send_application @listener, "playback", "/tmp/test.wav", event_lock: false
+    assert_execute_app @listener, "playback", "1234", "/tmp/test.wav", event_lock: false
   end
 end

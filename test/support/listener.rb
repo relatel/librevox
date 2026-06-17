@@ -9,11 +9,11 @@ class MockConnection
     @data = []
   end
 
-  def send_message(msg)
+  def send_data(msg)
     @data << msg
   end
 
-  def read_message
+  def receive_data
     nil
   end
 
@@ -88,9 +88,6 @@ module EventTests
     @class.event(:hook_with_arg) {|e| log "got event: #{e.event}"}
 
     @listener.on_event_block = proc {|e| log "from on_event: #{e.event}"}
-
-    # Establish session
-    @listener.receive_message(Librevox::Protocol::Response.new("Content-Length: 0\nTest: Testing", ""))
   end
 
   def test_add_event_hook
@@ -100,7 +97,7 @@ module EventTests
     end
   end
 
-  def test_execute_callback_for_event
+  def test_dispatches_matching_event_hooks
     event "OTHER_EVENT"
     assert_equal "something else", @listener.read_data
 
@@ -108,26 +105,19 @@ module EventTests
     assert_equal "something", @listener.read_data
   end
 
-  def test_pass_event_as_arg_to_hook_block
+  def test_passes_event_to_hook_block
     event "HOOK_WITH_ARG"
 
     assert_equal "got event: HOOK_WITH_ARG", @listener.read_data
   end
 
-  def test_expose_response
-    event "OTHER_EVENT"
-
-    assert_equal Librevox::Protocol::Response, @listener.response.class
-    assert_equal "OTHER_EVENT", @listener.response.content[:event_name]
-  end
-
-  def test_call_on_event
+  def test_calls_on_event_for_any_event
     event "THIRD_EVENT"
 
     assert_equal "from on_event: THIRD_EVENT", @listener.read_data
   end
 
-  def test_call_event_hooks_and_on_event_on_channel_data
+  def test_dispatches_on_event_and_hooks_for_channel_data
     @listener.hook_log.clear
 
     @listener.on_event_block = proc {|e| log "on_event: CHANNEL_DATA test"}
@@ -179,8 +169,21 @@ end
 module OutboundSetupHelpers
   include Librevox::Test::ListenerHelpers
 
-  def event_and_linger_replies
+  def setup_outbound(listener_class, **connect_headers)
+    headers = {"Unique-ID" => "1234"}.merge(connect_headers)
+
+    @listener = listener_class.new(MockConnection.new)
+    @session_task = Async { @listener.run_session }
+
+    command_reply(headers)
     command_reply "Reply-Text" => "+OK Events Enabled"
     command_reply "Reply-Text" => "+OK will linger"
+
+    # Discard connect, myevents, linger commands
+    3.times { @listener.outgoing_data.shift }
+  end
+
+  def teardown_outbound
+    @session_task&.stop
   end
 end

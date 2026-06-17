@@ -17,24 +17,20 @@ module Librevox::Test
       assert_nil obj.outgoing_data.shift
     end
 
-    def assert_send_application(obj, app, args = nil, **params)
-      headers = params
-        .merge(
-          event_lock:       true,
-          call_command:     "execute",
-          execute_app_name: app,
-          execute_app_arg:  args,
-        )
-        .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
+    def assert_execute_app(obj, app, uuid, args = nil, **params)
+      data = obj.outgoing_data.shift
+      assert data, "Expected sendmsg in outgoing data"
 
-      assert_equal "sendmsg\n#{headers.join("\n")}", obj.outgoing_data.shift
-    end
+      @last_event_uuid = data[/event-uuid: (.+)/, 1]
+      assert @last_event_uuid, "Expected event-uuid header in sendmsg"
 
-    def assert_update_session(obj, session_id = nil)
-      if session_id
-        assert_equal "api uuid_dump #{session_id}", obj.outgoing_data.shift
-      else
-        assert_match(/^api uuid_dump \d+/, obj.outgoing_data.shift)
+      assert_match(/\Asendmsg #{uuid}\n/, data)
+      assert_match(/execute-app-name: #{app}/, data)
+      assert_match(/execute-app-arg: #{args}/, data) if args
+
+      params.each do |key, value|
+        header = "#{key.to_s.tr('_', '-')}: #{value}"
+        assert_match(/#{Regexp.escape(header)}/, data)
       end
     end
   end
@@ -77,7 +73,9 @@ module Librevox::Test
       # sendmsg ack — always arrives before CHANNEL_EXECUTE_COMPLETE
       command_reply "Reply-Text" => "+OK"
 
-      body = {"Event-Name" => "CHANNEL_EXECUTE_COMPLETE"}.merge(args)
+      # Use the event-uuid from the last assert_execute_app, echoing it
+      # back as Application-UUID just like FreeSWITCH would.
+      body = {"Event-Name" => "CHANNEL_EXECUTE_COMPLETE", "Application-UUID" => @last_event_uuid}.merge(args)
       body_str = body.map {|k,v| "#{k}: #{v}"}.join("\n")
       headers = "Content-Type: text/event-plain\nContent-Length: #{body_str.size}"
 
@@ -92,7 +90,7 @@ module Librevox::Test
     end
   end
 
-  # Wraps each test method in Async { } so queue operations work.
+  # Wraps each test method in Async { } so promise operations work.
   module AsyncTest
     def run(...)
       Sync do

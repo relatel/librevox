@@ -10,12 +10,8 @@ require 'io/stream'
 require 'timeout'
 
 class BlockedOnAppListener < Librevox::Listener::Outbound
-  attr_reader :error
-
   def session_initiated
     sample_app "playback", "/tmp/test.wav"
-  rescue Librevox::ConnectionError => e
-    @error = e
   end
 end
 
@@ -177,15 +173,15 @@ class TestConnectionDrop < Minitest::Test
     port, server_thread = start_server(BlockedOnAppListener)
     socket = fake_fs_connect(port)
 
-    # session_initiated calls sample_app which sends sendmsg and blocks on app_complete_queue
+    # session_initiated calls sample_app which sends sendmsg and blocks on app promise
     msg = socket.gets("\n\n")
     assert_match(/sendmsg/, msg)
 
     # ack the sendmsg
     socket.write("Content-Type: command/reply\nReply-Text: +OK\n\n")
 
-    # Now the listener is blocked on app_complete_queue.dequeue
-    # Drop the connection — should unblock via queue close
+    # Now the listener is blocked on app promise
+    # Drop the connection — should unblock via promise rejection
     socket.close
     socket = nil
 

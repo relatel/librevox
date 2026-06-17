@@ -9,10 +9,12 @@ module Librevox
 
   autoload :Client, 'librevox/client'
   autoload :CommandSocket, 'librevox/command_socket'
+  autoload :CommandDelegate, 'librevox/command_delegate'
   autoload :Commands, 'librevox/commands'
   autoload :Applications, 'librevox/applications'
   autoload :Runner, 'librevox/runner'
   autoload :Server, 'librevox/server'
+  autoload :Session, 'librevox/session'
 
   module Protocol
     autoload :Connection, 'librevox/protocol/connection'
@@ -44,10 +46,6 @@ module Librevox
     logger = Logger.new(options[:log_file])
     logger.level = options[:log_level]
     logger
-  end
-
-  def self.reopen_log
-    @logger = logger!
   end
 
   # Start a single listener:

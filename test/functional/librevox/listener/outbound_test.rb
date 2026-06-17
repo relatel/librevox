@@ -10,23 +10,20 @@ class OutboundTestListener < Librevox::Listener::Outbound
   end
 end
 
-class TestOutboundListener < Minitest::Test
+class TestOutboundHandshake < Minitest::Test
   prepend Librevox::Test::AsyncTest
-  include OutboundSetupHelpers
+  include Librevox::Test::ListenerHelpers
   include Librevox::Test::Matchers
-  include EventTests
-  include ApiCommandTests
 
   def setup
     @listener = OutboundTestListener.new(MockConnection.new)
     @session_task = Async { @listener.run_session }
-    command_reply(
-      "Caller-Caller-Id-Number" => "8675309",
-      "Unique-ID"               => "1234",
-      "variable_some_var"       => "some value"
-    )
-    event_and_linger_replies
-    super
+
+    command_reply "Caller-Caller-Id-Number" => "8675309",
+                  "Unique-ID"               => "1234",
+                  "variable_some_var"       => "some value"
+    command_reply "Reply-Text" => "+OK Events Enabled"
+    command_reply "Reply-Text" => "+OK will linger"
   end
 
   def teardown
@@ -34,25 +31,41 @@ class TestOutboundListener < Minitest::Test
     super
   end
 
-  def test_connect_to_freeswitch_and_subscribe_to_events
-    assert_send_command @listener, "connect"
-    assert_send_command @listener, "myevents"
-    assert_send_command @listener, "linger"
+  def test_sends_connect_myevents_linger_in_order
+    assert_equal "connect",  @listener.outgoing_data.shift
+    assert_equal "myevents", @listener.outgoing_data.shift
+    assert_equal "linger",   @listener.outgoing_data.shift
+    assert_nil @listener.outgoing_data.shift
   end
 
-  def test_establish_a_session
+  def test_establishes_session_from_connect_reply
     assert_equal Hash, @listener.session.class
-  end
-
-  def test_call_session_callback_after_establishing_new_session
-    assert_includes @listener.hook_log, "session was initiated"
-  end
-
-  def test_make_headers_available_through_session
     assert_equal "8675309", @listener.session[:caller_caller_id_number]
   end
 
-  def test_make_channel_variables_available_through_variable
+  def test_calls_session_initiated_after_handshake
+    assert_includes @listener.hook_log, "session was initiated"
+  end
+
+  def test_exposes_channel_variables
     assert_equal "some value", @listener.variable(:some_var)
+  end
+end
+
+class TestOutboundEvents < Minitest::Test
+  prepend Librevox::Test::AsyncTest
+  include OutboundSetupHelpers
+  include Librevox::Test::Matchers
+  include EventTests
+  include ApiCommandTests
+
+  def setup
+    setup_outbound OutboundTestListener
+    super
+  end
+
+  def teardown
+    teardown_outbound
+    super
   end
 end
