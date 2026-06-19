@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Librevox</title>
+  <style>
+    body {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 24px 96px;
+      color: #1a1a1a;
+      background: #fff;
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    a { color: #1452cc; }
+    h1 { font-size: 28px; margin: 0 0 4px; }
+    h1 + p { color: #555; margin-top: 0; }
+    h2 {
+      font-size: 22px;
+      margin: 44px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    h3 { font-size: 17px; margin: 28px 0 8px; }
+    p, li { margin: 0 0 12px; }
+    ul, ol { padding-left: 22px; }
+    code {
+      font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f4f4f4;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f6f6f6;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      padding: 14px 16px;
+      overflow-x: auto;
+    }
+    pre code { background: none; padding: 0; font-size: 13.5px; }
+    nav {
+      margin: 24px 0 8px;
+      padding: 16px 20px;
+      background: #f8f8f8;
+      border: 1px solid #eee;
+      border-radius: 6px;
+    }
+    nav ul { margin: 0; padding-left: 18px; }
+    nav li { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <h1>Librevox</h1>
+  <p>A Ruby library for interacting with <a href="http://www.freeswitch.org">FreeSWITCH</a> through
+  <a href="https://developer.signalwire.com/freeswitch/FreeSWITCH-Explained/Modules/mod_event_socket_1048924/">mod_event_socket</a>, using async I/O.</p>
+
+  <nav>
+    <ul>
+      <li><a href="#prerequisites">Prerequisites</a></li>
+      <li><a href="#installation">Installation</a></li>
+      <li><a href="#inbound">Inbound listener</a></li>
+      <li><a href="#outbound">Outbound listener</a></li>
+      <li><a href="#starting">Starting listeners</a></li>
+      <li><a href="#closing">Closing connections</a></li>
+      <li><a href="#command-socket">Command socket</a></li>
+      <li><a href="#configuration">Configuration</a></li>
+    </ul>
+  </nav>
+
+  <h2 id="prerequisites">Prerequisites</h2>
+  <p>You should be familiar with
+  <a href="https://developer.signalwire.com/freeswitch/FreeSWITCH-Explained/Modules/mod_event_socket_1048924/">mod_event_socket</a>
+  and the differences between inbound and outbound event sockets before getting started.</p>
+  <p>Requires Ruby 3.0+.</p>
+
+  <h2 id="installation">Installation</h2>
+  <p>Add to your <code>Gemfile</code>:</p>
+  <pre><code>gem "librevox"</code></pre>
+
+  <h2 id="inbound">Inbound listener</h2>
+  <p>Subclass <code>Librevox::Listener::Inbound</code> to create an inbound listener. It connects to
+  FreeSWITCH and subscribes to events.</p>
+
+  <h3>Events</h3>
+  <p>React to events in two ways:</p>
+  <ol>
+    <li>Override <code>on_event</code>, called for every event.</li>
+    <li>Use <code>event</code> hooks for specific event names.</li>
+  </ol>
+  <pre><code>class MyInbound &lt; Librevox::Listener::Inbound
+  def on_event(e)
+    puts "Got event: #{e.content[:event_name]}"
+  end
+
+  event :channel_hangup do
+    do_something
+  end
+
+  # The hook block receives a Response when it takes an argument:
+  event :channel_bridge do |e|
+    puts e.content[:caller_caller_id_number]
+  end
+
+  def do_something
+    # ...
+  end
+end</code></pre>
+
+  <h3>Event filtering</h3>
+  <p>By default, inbound listeners subscribe to all events. Use <code>events</code> to limit which events
+  are received, and <code>filters</code> to filter by header values:</p>
+  <pre><code>class MyInbound &lt; Librevox::Listener::Inbound
+  events ['CHANNEL_EXECUTE', 'CUSTOM foo']
+  filters 'Caller-Context' =&gt; ['default', 'example'],
+          'Caller-Privacy-Hide-Name' =&gt; 'no'
+end</code></pre>
+  <p><strong>Note on CUSTOM events:</strong> FreeSWITCH custom events have a subclass name (e.g.
+  <code>CUSTOM conference::maintenance</code>). You must include both the event name and subclass —
+  <code>events ['CUSTOM conference::maintenance']</code>. Using just <code>events ['CUSTOM']</code>
+  will not match any custom events.</p>
+
+  <h2 id="outbound">Outbound listener</h2>
+  <p>Subclass <code>Librevox::Listener::Outbound</code> to create an outbound listener. FreeSWITCH
+  connects to it when a call hits a socket application in the dialplan.</p>
+  <p>Outbound listeners have the same event functionality as inbound, but scoped to the session.</p>
+
+  <h3>Dialplan</h3>
+  <p>When FreeSWITCH connects, <code>session_initiated</code> is called. Build your dialplan here.</p>
+  <p>Each application call blocks until FreeSWITCH signals completion
+  (<code>CHANNEL_EXECUTE_COMPLETE</code>), so applications execute sequentially:</p>
+  <pre><code>class MyOutbound &lt; Librevox::Listener::Outbound
+  def session_initiated
+    answer
+    digit = play_and_get_digits "enter-digit.wav", "bad-digit.wav"
+    bridge "sofia/gateway/trunk/#{digit}"
+  end
+end</code></pre>
+  <p>Applications that read input (like <code>play_and_get_digits</code> and <code>read</code>) return the
+  collected value directly.</p>
+  <pre><code>def session_initiated
+  answer
+  set "foo", "bar"
+  multiset "baz" =&gt; "1", "qux" =&gt; "2"
+  playback "welcome.wav"
+  hangup
+end</code></pre>
+  <p>For apps not yet wrapped by a named helper, call <code>application</code> directly:</p>
+  <pre><code>application "park"</code></pre>
+  <p>Channel variables are available through <code>session</code> (a hash) and <code>variable</code>:</p>
+  <pre><code>def session_initiated
+  answer
+  number = variable(:destination_number)
+  playback "greeting-#{number}.wav"
+end</code></pre>
+
+  <h3>API commands</h3>
+  <p>To avoid name clashes between applications and commands, commands are accessed through
+  <code>api</code>:</p>
+  <pre><code>def session_initiated
+  answer
+  api.status
+  api.originate 'sofia/user/coltrane', extension: "1234"
+end</code></pre>
+
+  <h2 id="starting">Starting listeners</h2>
+  <p>Start a single listener:</p>
+  <pre><code>Librevox.start MyInbound</code></pre>
+  <p>With connection options:</p>
+  <pre><code>Librevox.start MyInbound, host: "1.2.3.4", port: 8021, auth: "secret"</code></pre>
+  <p>Start multiple listeners:</p>
+  <pre><code>Librevox.start do
+  run MyInbound
+  run MyOutbound, port: 8084
+end</code></pre>
+  <p>Default ports are 8021 for inbound and 8084 for outbound.</p>
+
+  <h2 id="closing">Closing connections</h2>
+  <p>After a session ends (e.g. the caller hangs up), the outbound socket connection to FreeSWITCH
+  remains open for post-session events. Close it manually when done to avoid lingering sessions:</p>
+  <pre><code>class MyOutbound &lt; Librevox::Listener::Outbound
+  event :channel_hangup do
+    disconnect
+  end
+end</code></pre>
+
+  <h2 id="command-socket">Command socket</h2>
+  <p><code>Librevox::CommandSocket</code> connects to the FreeSWITCH management console for one-off
+  commands:</p>
+  <pre><code>require "librevox/command_socket"
+
+socket = Librevox::CommandSocket.new(server: "127.0.0.1", port: 8021, auth: "ClueCon")
+
+socket.originate 'sofia/user/coltrane', extension: "1234"
+#=&gt; #&lt;Librevox::Protocol::Response ...&gt;
+
+socket.status
+#=&gt; #&lt;Librevox::Protocol::Response ...&gt;
+
+socket.close</code></pre>
+
+  <h2 id="configuration">Configuration</h2>
+  <pre><code>Librevox.options[:log_file]  = "librevox.log"  # default: STDOUT
+Librevox.options[:log_level] = Logger::DEBUG    # default: Logger::INFO</code></pre>
+</body>
+</html>
