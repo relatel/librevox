@@ -44,7 +44,18 @@ module Librevox
         # while awaiting a reply would deadlock every other sender.
         @write_lock.acquire do
           @reply_promises << promise
-          @connection.send_data(msg)
+          begin
+            @connection.send_data(msg)
+          rescue Exception => error
+            # A promise may only stay queued if its command fully reached the
+            # wire — otherwise no reply will ever arrive for it, and every
+            # later reply would resolve the wrong sender's promise. Must catch
+            # Exception: a sender cancelled mid-send raises Async::Stop, which
+            # is not a StandardError.
+            @reply_promises.delete(promise)
+            promise.reject(error)
+            raise
+          end
         end
 
         reply = promise.wait
