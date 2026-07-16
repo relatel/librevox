@@ -38,24 +38,19 @@ module Librevox
       def send_message(msg)
         promise = Async::Promise.new
 
-        # Serialize only the enqueue+send so the FIFO order of @reply_promises
-        # always matches the byte order on the wire, even when concurrent event
-        # hooks send commands. Must not cover promise.wait — holding the lock
-        # while awaiting a reply would deadlock every other sender.
+        # Send first, then record the reply promise — both under the write lock
+        # so @reply_promises order always matches the byte order on the wire,
+        # even when concurrent event hooks send commands. Recording only *after*
+        # send_data returns is what keeps the queue honest: a sender cancelled
+        # (Async::Stop) or failed mid-send never enqueues a promise, so it can
+        # never leave an orphaned slot for a later reply to be misrouted onto.
+        # There is no yield between the send and the push, so no reply for this
+        # command can be observed before its promise is queued. Must not cover
+        # promise.wait — holding the lock while awaiting a reply would deadlock
+        # every other sender.
         @write_lock.acquire do
+          @connection.send_data(msg)
           @reply_promises << promise
-          begin
-            @connection.send_data(msg)
-          rescue Exception => error
-            # A promise may only stay queued if its command fully reached the
-            # wire — otherwise no reply will ever arrive for it, and every
-            # later reply would resolve the wrong sender's promise. Must catch
-            # Exception: a sender cancelled mid-send raises Async::Stop, which
-            # is not a StandardError.
-            @reply_promises.delete(promise)
-            promise.reject(error)
-            raise
-          end
         end
 
         reply = promise.wait

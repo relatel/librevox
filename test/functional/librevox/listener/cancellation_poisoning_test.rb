@@ -60,13 +60,14 @@ class BlockableConnection
   def close_write; end
 end
 
-# Regression tests for cancellation-safety of the send path. Base#send_message
-# pushes the reply promise onto @reply_promises *before* @connection.send_data
-# returns; because replies are matched purely positionally
-# (@reply_promises.shift in receive_message), a promise left queued by a sender
-# that was cancelled mid-send would permanently shift reply correlation by one
-# for every later sender on the same shared connection. send_message must
-# therefore remove (and reject) the promise when send_data is interrupted.
+# Regression tests for cancellation-safety of the send path. Replies are
+# matched to senders purely positionally (@reply_promises.shift in
+# receive_message), so a promise sitting in the queue with no command behind it
+# would permanently shift reply correlation by one for every later sender on
+# the shared connection. Base#send_message avoids that by enqueuing the reply
+# promise only *after* @connection.send_data returns: a sender cancelled
+# (Async::Stop) or failed mid-send never enqueues, so it can never orphan a
+# slot for a later reply to be misrouted onto.
 class TestCancellationPoisoning < Minitest::Test
   prepend Librevox::Test::AsyncTest
 
@@ -119,10 +120,9 @@ class TestCancellationPoisoning < Minitest::Test
     resolved = bounded_yield { c_result }
     assert resolved,
       "C's send_message never returned — its reply promise was starved. " \
-      "B's cancelled-mid-send promise was not removed from @reply_promises, " \
-      "so the reply meant for C (the 2nd real reply on the wire) was shifted " \
-      "onto B's orphaned promise instead, leaving C's promise permanently " \
-      "unresolved."
+      "B was enqueued with no command behind it, so the reply meant for C " \
+      "(the 2nd real reply on the wire) was shifted onto B's orphaned promise " \
+      "instead, leaving C's promise permanently unresolved."
 
     assert_equal "+OK reply-for-C", c_result.headers[:reply_text],
       "C's send_message resolved with the wrong reply — its own reply was " \
@@ -191,9 +191,10 @@ class TestCancellationPoisoning < Minitest::Test
     d&.stop
   end
 
-  # A send that fails with an exception (rather than being cancelled) must
-  # take the same cleanup path: the error propagates to the sender, and the
-  # orphaned promise must not stay behind to eat a later sender's reply.
+  # A send that fails with an exception (rather than being cancelled) is the
+  # same story: send_data raises before the promise is enqueued, so the error
+  # propagates to the sender and no orphaned slot is ever created to eat a
+  # later sender's reply.
   def test_a_failing_send_does_not_leave_its_promise_in_the_reply_queue
     a_result = nil
     c_result = nil
