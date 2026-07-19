@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'async/barrier'
+require 'async/promise'
 require 'async/semaphore'
 require 'securerandom'
 
@@ -21,7 +21,15 @@ module Librevox
         @connection = connection
         @reply_promises = []
         @app_promises = {}
-        @event_barrier = Async::Barrier.new
+        # Event hooks run in fire-and-forget tasks. We only need to *count* the
+        # in-flight ones (so a disconnect can drain them) — not hold references to
+        # them. A count is one integer regardless of how many events pass through;
+        # an Async::Barrier, by contrast, retains a node per task until #wait, so
+        # it grew without bound on a long-lived connection (one node per event for
+        # the life of the socket — a slow memory leak).
+        @event_tasks = 0
+        @drained = Async::Promise.new
+        @closing = false
         @write_lock = Async::Semaphore.new(1)
       end
 
@@ -92,9 +100,14 @@ module Librevox
             @app_promises.delete(app_uuid)&.resolve(response)
           end
 
-          @event_barrier.async do
+          @event_tasks += 1
+          Async do
             on_event(response)
             invoke_event_hooks(response)
+          ensure
+            @event_tasks -= 1
+            # The last hook to finish during a drain rings the bell.
+            @drained.resolve(true) if @closing && @event_tasks.zero?
           end
         end
       end
@@ -108,7 +121,13 @@ module Librevox
         @reply_promises.clear
         @app_promises.clear
 
-        @event_barrier.wait
+        # Drain in-flight event hooks: wait until the count hits zero. If nothing
+        # is in flight, resolve immediately so #wait returns at once; otherwise the
+        # last hook's ensure resolves it. Promise (not Condition) so a resolve that
+        # races ahead of the wait is still delivered.
+        @closing = true
+        @drained.resolve(true) if @event_tasks.zero?
+        @drained.wait
       rescue ConnectionError
         # Expected — event hooks may have been mid-command when disconnected
       end
