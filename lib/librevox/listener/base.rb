@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'async/barrier'
 require 'async/semaphore'
 require 'securerandom'
+require 'set'
 
 module Librevox
   module Listener
@@ -21,7 +21,7 @@ module Librevox
         @connection = connection
         @reply_promises = []
         @app_promises = {}
-        @event_barrier = Async::Barrier.new
+        @event_tasks = Set.new
         @write_lock = Async::Semaphore.new(1)
       end
 
@@ -92,9 +92,14 @@ module Librevox
             @app_promises.delete(app_uuid)&.resolve(response)
           end
 
-          @event_barrier.async do
-            on_event(response)
-            invoke_event_hooks(response)
+          Async do |task|
+            @event_tasks << task
+            begin
+              on_event(response)
+              invoke_event_hooks(response)
+            ensure
+              @event_tasks.delete(task)
+            end
           end
         end
       end
@@ -108,7 +113,7 @@ module Librevox
         @reply_promises.clear
         @app_promises.clear
 
-        @event_barrier.wait
+        @event_tasks.each { |task| task.wait rescue nil }
       rescue ConnectionError
         # Expected — event hooks may have been mid-command when disconnected
       end

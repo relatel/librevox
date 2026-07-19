@@ -26,4 +26,21 @@ class TestListenerBase < Minitest::Test
 
     assert completed, "Deadlock: on_event with api command blocked handle_response"
   end
+
+  # Regression: a long-lived inbound connection dispatches one event-handler
+  # task per ESL event. These are fire-and-forget, so once finished they must be
+  # released. Previously they were spawned on a per-connection Async::Barrier,
+  # whose task list only shrinks on #wait (called just once, on disconnect) — so
+  # every event leaked a task node for the life of the socket (~GBs over days on
+  # a busy switch). They must not accumulate.
+  def test_completed_event_tasks_are_not_retained
+    Sync do
+      100.times { event "SOME_EVENT" }
+
+      in_flight = @listener.instance_variable_get(:@event_tasks)
+      assert_empty in_flight,
+        "completed event-handler tasks must not accumulate on the listener " \
+        "(got #{in_flight.size} retained after 100 events)"
+    end
+  end
 end
