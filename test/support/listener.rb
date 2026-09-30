@@ -17,6 +17,9 @@ class MockConnection
     nil
   end
 
+  def close_write
+  end
+
   def close
   end
 end

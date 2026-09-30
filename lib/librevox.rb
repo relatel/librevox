@@ -6,6 +6,9 @@ require 'librevox/version'
 module Librevox
   class ResponseError < StandardError; end
   class ConnectionError < StandardError; end
+  # A reply arrived that isn't the kind its command expects, so replies and
+  # commands are out of step. The connection can't be trusted any more.
+  class ProtocolError < ConnectionError; end
 
   autoload :Client, 'librevox/client'
   autoload :CommandSocket, 'librevox/command_socket'
