@@ -45,6 +45,14 @@ class TestResponse < Minitest::Test
     refute response.api_response?
   end
 
+  # An API command's output is its body, verbatim: a value with a colon, like
+  # a URL, must not be parsed as a header line.
+  def test_api_response_content_is_the_raw_body
+    response = Librevox::Protocol::Response.new("Content-Type: api/response", "local_stream://latin")
+
+    assert_equal "local_stream://latin", response.content
+  end
+
   def test_check_for_command_reply
     response = Librevox::Protocol::Response.new("Content-Type: command/reply", "+OK")
     assert response.command_reply?

@@ -9,7 +9,7 @@ module Librevox
 
       def initialize(headers = "", content = "")
         @headers = parse_headers(headers)
-        @content = parse_content(content)
+        @content = api_response? ? content : parse_content(content)
       end
 
       def event?
