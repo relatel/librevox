@@ -19,7 +19,8 @@ class TestOutboundHandshake < Minitest::Test
     @listener = OutboundTestListener.new(MockConnection.new)
     @session_task = Async { @listener.run_session }
 
-    command_reply "Caller-Caller-Id-Number" => "8675309",
+    command_reply "Event-Name"              => "CHANNEL_DATA",
+                  "Caller-Caller-Id-Number" => "8675309",
                   "Unique-ID"               => "1234",
                   "variable_some_var"       => "some value",
                   "variable_route_plan"     => "%7B%22a%22%3A1%7D",

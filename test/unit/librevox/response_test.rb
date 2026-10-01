@@ -93,6 +93,13 @@ class TestResponse < Minitest::Test
     assert_equal "100%2B", response.content[:reply_text]
   end
 
+  # FreeSWITCH's reply to connect is the channel data, a serialized event.
+  def test_url_decodes_the_headers_of_a_reply_that_is_an_event
+    response = Librevox::Protocol::Response.new("Content-Type: command/reply\nEvent-Name: CHANNEL_DATA\nCaller-Caller-ID-Number: %2B4512345678", "")
+    assert_equal "+4512345678", response.headers[:caller_caller_id_number]
+    assert_equal "command/reply", response.headers[:content_type]
+  end
+
   def test_does_not_url_decode_headers
     response = Librevox::Protocol::Response.new("Content-Type: text%2Fevent-plain", "")
     assert_equal "text%2Fevent-plain", response.headers[:content_type]
