@@ -43,4 +43,15 @@ class TestInboundListener < Minitest::Test
     assert_equal "2488abe2-c494-4d71-a83f-f3ab40c75f44", sending.wait
     assert_equal "sendevent CUSTOM\nEvent-Subclass: my::event\nSome-Header: value", @listener.outgoing_data.shift
   end
+
+  # A line break would end the command early and send the rest as a command
+  # of its own.
+  def test_sendevent_refuses_a_line_break_in_a_header
+    @listener.outgoing_data.clear
+
+    assert_raises(ArgumentError) { @listener.sendevent("CUSTOM", "Some-Header" => "x\n\napi uuid_kill all") }
+    assert_raises(ArgumentError) { @listener.sendevent("CUSTOM", "Some\r\nHeader" => "x") }
+    assert_raises(ArgumentError) { @listener.sendevent("CUSTOM\nbgapi status") }
+    assert_nil @listener.outgoing_data.shift, "nothing was sent"
+  end
 end

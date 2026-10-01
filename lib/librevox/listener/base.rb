@@ -61,11 +61,17 @@ module Librevox
 
       # Fire an event into FreeSWITCH, for every ESL listener subscribed to it.
       # Returns the Event-UUID FreeSWITCH gives the event, which every listener
-      # sees.
+      # sees. A line break in a header would end the command early and send
+      # the rest as another command, so one raises ArgumentError.
       # @example
       #   sendevent "CUSTOM", "Event-Subclass" => "my::event", "Some-Header" => "value"
       def sendevent(name, headers = {})
-        lines = headers.compact.map { |header, value| "#{header}: #{value}" }
+        headers = headers.compact
+        if [name, *headers.flatten].any? { |part| part.to_s.match?(/[\r\n]/) }
+          raise ArgumentError, "sendevent headers can't contain line breaks"
+        end
+
+        lines = headers.map { |header, value| "#{header}: #{value}" }
         reply = send_message(["sendevent #{name}", *lines].join("\n"))
         reply.headers[:reply_text].delete_prefix("+OK ")
       end
