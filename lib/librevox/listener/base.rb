@@ -59,6 +59,17 @@ module Librevox
         reply
       end
 
+      # Fire an event into FreeSWITCH, for every ESL listener subscribed to it.
+      # Returns the Event-UUID FreeSWITCH gives the event, which every listener
+      # sees.
+      # @example
+      #   sendevent "CUSTOM", "Event-Subclass" => "my::event", "Some-Header" => "value"
+      def sendevent(name, headers = {})
+        lines = headers.compact.map { |header, value| "#{header}: #{value}" }
+        reply = send_message(["sendevent #{name}", *lines].join("\n"))
+        reply.headers[:reply_text].delete_prefix("+OK ")
+      end
+
       def execute_app(app, uuid, args = nil, **params)
         event_uuid = SecureRandom.uuid
 

@@ -34,4 +34,13 @@ class TestInboundListener < Minitest::Test
     assert_equal "event plain ALL", @listener.outgoing_data.shift
     assert_nil @listener.outgoing_data.shift
   end
+
+  def test_sendevent_sends_the_event_and_returns_its_event_uuid
+    @listener.outgoing_data.clear
+    sending = Async { @listener.sendevent("CUSTOM", "Event-Subclass" => "my::event", "Some-Header" => "value", "Skipped" => nil) }
+    command_reply "Reply-Text" => "+OK 2488abe2-c494-4d71-a83f-f3ab40c75f44"
+
+    assert_equal "2488abe2-c494-4d71-a83f-f3ab40c75f44", sending.wait
+    assert_equal "sendevent CUSTOM\nEvent-Subclass: my::event\nSome-Header: value", @listener.outgoing_data.shift
+  end
 end
