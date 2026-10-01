@@ -81,9 +81,16 @@ class TestResponse < Minitest::Test
     assert_equal "hello+world", response.content[:some_header]
   end
 
-  def test_url_decode_non_event_content
-    response = Librevox::Protocol::Response.new("Content-Type: command/reply", "Reply-Text: %2BOK")
-    assert_equal "+OK", response.content[:reply_text]
+  # FreeSWITCH encodes only the events it serializes; log lines are raw.
+  def test_does_not_url_decode_non_event_content
+    response = Librevox::Protocol::Response.new("Content-Type: log/data", "Log-Level: 7\n\nrate is 100%2B")
+    assert_equal "7", response.content[:log_level]
+    assert_equal "rate is 100%2B", response.content[:body]
+  end
+
+  def test_does_not_url_decode_a_reply_body
+    response = Librevox::Protocol::Response.new("Content-Type: command/reply", "Reply-Text: 100%2B")
+    assert_equal "100%2B", response.content[:reply_text]
   end
 
   def test_does_not_url_decode_headers

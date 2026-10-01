@@ -53,11 +53,14 @@ module Librevox
         parse_kv(headers)
       end
 
+      # FreeSWITCH URL-encodes the header values of an event it serializes
+      # (text/event-plain), and nothing else it sends in a body: log/data and
+      # disconnect notices are raw. An event's own body is raw too.
       def parse_content(content)
         return content unless content.include?(":")
 
         headers, body = content.split("\n\n", 2)
-        parse_kv(headers, decode: true).merge(body: body || "")
+        parse_kv(headers, decode: event?).merge(body: body || "")
       end
 
       def parse_kv(string, decode: false)
