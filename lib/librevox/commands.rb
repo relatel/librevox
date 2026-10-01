@@ -66,6 +66,33 @@ module Librevox
       command "uuid_park", uuid
     end
 
+    # Hang up a call, with an optional cause.
+    # @example
+    #   socket.uuid_kill "592567a2-1be4-11df-a036-19bfdab2092f", "NO_ROUTE_DESTINATION"
+    # @see http://wiki.freeswitch.org/wiki/Mod_commands#uuid_kill
+    def uuid_kill(uuid, cause = nil)
+      command "uuid_kill", [uuid, cause].compact.join(" ")
+    end
+
+    # Schedule a hangup. `time` is seconds from now with a leading "+", or an
+    # epoch time.
+    # @example
+    #   socket.sched_hangup "+3600", "592567a2-1be4-11df-a036-19bfdab2092f", "ALLOTTED_TIMEOUT"
+    # @see http://wiki.freeswitch.org/wiki/Mod_commands#sched_hangup
+    def sched_hangup(time, uuid, cause = nil)
+      command "sched_hangup", [time, uuid, cause].compact.join(" ")
+    end
+
+    # Delete a scheduled task by its id, or every task in a group. A call's
+    # scheduled tasks (sched_hangup, sched_transfer, …) are grouped by its uuid.
+    # FreeSWITCH replies "+OK Deleted: <count>".
+    # @example
+    #   socket.sched_del "592567a2-1be4-11df-a036-19bfdab2092f"
+    # @see http://wiki.freeswitch.org/wiki/Mod_commands#sched_del
+    def sched_del(id)
+      command "sched_del", id
+    end
+
     # Bridge two call legs together. At least one leg must be answered.
     # @example
     #   socket.uuid_bridge "592567a2-1be4-11df-a036-19bfdab2092f", "58b39c3a-1be4-11df-a035-19bfdab2092f"

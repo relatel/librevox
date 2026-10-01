@@ -94,4 +94,25 @@ class TestCommands < Minitest::Test
     assert_equal "uuid_bridge", cmd[:name]
     assert_equal "1234-abcd 9090-ffff", cmd[:args]
   end
+
+  def test_uuid_kill
+    cmd = C.uuid_kill "1234-abcd"
+    assert_equal "uuid_kill", cmd[:name]
+    assert_equal "1234-abcd", cmd[:args]
+
+    cmd = C.uuid_kill "1234-abcd", "NO_ROUTE_DESTINATION"
+    assert_equal "1234-abcd NO_ROUTE_DESTINATION", cmd[:args]
+  end
+
+  def test_sched_hangup
+    cmd = C.sched_hangup "+3600", "1234-abcd", "ALLOTTED_TIMEOUT"
+    assert_equal "sched_hangup", cmd[:name]
+    assert_equal "+3600 1234-abcd ALLOTTED_TIMEOUT", cmd[:args]
+  end
+
+  def test_sched_del
+    cmd = C.sched_del "1234-abcd"
+    assert_equal "sched_del", cmd[:name]
+    assert_equal "1234-abcd", cmd[:args]
+  end
 end
