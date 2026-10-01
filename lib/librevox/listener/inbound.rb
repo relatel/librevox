@@ -31,16 +31,19 @@ module Librevox
 
         send_message "auth #{@auth}"
 
-        events = self.class.subscribe_events || ['ALL']
-
-        send_message "event plain #{events.join(' ')}"
-
+        # Filters first: FreeSWITCH sends every subscribed event while a
+        # connection has no filters, so subscribing first would let the whole
+        # node's events through until the filters land.
         filters = self.class.subscribe_filters || {}
         filters.each do |header, values|
           [*values].each do |value|
             send_message "filter #{header} #{value}"
           end
         end
+
+        events = self.class.subscribe_events || ['ALL']
+
+        send_message "event plain #{events.join(' ')}"
 
         connection_completed
       end

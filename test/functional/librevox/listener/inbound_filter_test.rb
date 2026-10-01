@@ -22,12 +22,12 @@ class TestInboundListenerWithFiltering < Minitest::Test
     @session_task = Async { @listener.run_session }
     # auth reply
     command_reply "Reply-Text" => "+OK accepted"
-    # event reply
-    command_reply "Reply-Text" => "+OK event listener enabled plain"
     # 3 filter replies
     command_reply "Reply-Text" => "+OK filter added"
     command_reply "Reply-Text" => "+OK filter added"
     command_reply "Reply-Text" => "+OK filter added"
+    # event reply
+    command_reply "Reply-Text" => "+OK event listener enabled plain"
     super
   end
 
@@ -36,12 +36,13 @@ class TestInboundListenerWithFiltering < Minitest::Test
     super
   end
 
-  def test_sends_auth_events_and_filters
+  # Filters before the subscription, so no unfiltered event gets through.
+  def test_sends_auth_then_filters_then_events
     assert_equal "auth ClueCon", @listener.outgoing_data.shift
-    assert_equal "event plain CUSTOM CHANNEL_EXECUTE", @listener.outgoing_data.shift
     assert_equal "filter Caller-Context default", @listener.outgoing_data.shift
     assert_equal "filter Caller-Context example", @listener.outgoing_data.shift
     assert_equal "filter Caller-Privacy-Hide-Name no", @listener.outgoing_data.shift
+    assert_equal "event plain CUSTOM CHANNEL_EXECUTE", @listener.outgoing_data.shift
     assert_nil @listener.outgoing_data.shift
   end
 end
