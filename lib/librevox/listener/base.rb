@@ -50,7 +50,7 @@ module Librevox
         # every other sender.
         @write_lock.acquire do
           @connection.send_data(msg)
-          @reply_promises << [promise, expected_reply(msg)]
+          @reply_promises << promise
         end
 
         reply = promise.wait
@@ -98,8 +98,10 @@ module Librevox
       end
 
       def receive_message(response)
+        # FreeSWITCH answers a connection's commands once each, in order, so a
+        # reply belongs to the oldest waiting command (see #send_message).
         if response.reply?
-          resolve_reply(response)
+          @reply_promises.shift&.resolve(response)
           return
         end
 
@@ -124,7 +126,7 @@ module Librevox
       def connection_closed
         error = ConnectionError.new("Connection closed")
 
-        @reply_promises.each { |p, _| p.reject(error) }
+        @reply_promises.each { |p| p.reject(error) }
         @app_promises.each_value { |p| p.reject(error) }
 
         @reply_promises.clear
@@ -149,32 +151,6 @@ module Librevox
       end
 
       private
-
-      # FreeSWITCH answers every command on a connection once, in order, and
-      # its replies carry no request id. So each reply goes to the oldest
-      # waiting command, and must be the kind that command expects: an
-      # api/response for `api`, a command/reply for everything else. Anything
-      # else means commands and replies are out of step, and every waiting
-      # command is failed rather than handed someone else's reply.
-      def resolve_reply(response)
-        promise, expected = @reply_promises.shift
-        return unless promise
-        return promise.resolve(response) if response.public_send(expected)
-
-        out_of_step(response, promise)
-      end
-
-      def expected_reply(msg)
-        msg.start_with?("api ") ? :api_response? : :command_reply?
-      end
-
-      def out_of_step(response, promise)
-        error = ProtocolError.new("reply out of step: got #{response.headers[:content_type]}")
-        promise.reject(error)
-        @reply_promises.each { |p, _| p.reject(error) }
-        @reply_promises.clear
-        disconnect
-      end
 
       def on_event(event)
       end
