@@ -19,7 +19,7 @@ module Librevox
       end
 
       def run_session
-        @session = send_message("connect").headers
+        @session = send_message("connect").decoded_headers
 
         send_message "myevents"
         send_message "linger"

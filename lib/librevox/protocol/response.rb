@@ -40,6 +40,13 @@ module Librevox
         reply? && headers[:reply_text]&.start_with?("-ERR")
       end
 
+      # The headers with their values URL-decoded. FreeSWITCH URL-encodes the
+      # channel data in its reply to an outbound socket's `connect`, as it
+      # does in event bodies. Other replies' headers are not encoded.
+      def decoded_headers
+        @headers.transform_values { |value| URI::RFC2396_PARSER.unescape(value) }
+      end
+
       private
 
       def parse_headers(headers)

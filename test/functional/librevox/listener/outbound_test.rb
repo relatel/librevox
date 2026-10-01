@@ -21,7 +21,9 @@ class TestOutboundHandshake < Minitest::Test
 
     command_reply "Caller-Caller-Id-Number" => "8675309",
                   "Unique-ID"               => "1234",
-                  "variable_some_var"       => "some value"
+                  "variable_some_var"       => "some value",
+                  "variable_route_plan"     => "%7B%22a%22%3A1%7D",
+                  "variable_from_number"    => "%2B4512345678"
     command_reply "Reply-Text" => "+OK Events Enabled"
     command_reply "Reply-Text" => "+OK will linger"
   end
@@ -41,6 +43,12 @@ class TestOutboundHandshake < Minitest::Test
   def test_establishes_session_from_connect_reply
     assert_equal Hash, @listener.session.class
     assert_equal "8675309", @listener.session[:caller_caller_id_number]
+  end
+
+  # FreeSWITCH URL-encodes the channel data in its connect reply.
+  def test_decodes_the_channel_data
+    assert_equal '{"a":1}', @listener.session[:variable_route_plan]
+    assert_equal "+4512345678", @listener.session[:variable_from_number]
   end
 
   def test_calls_session_initiated_after_handshake
