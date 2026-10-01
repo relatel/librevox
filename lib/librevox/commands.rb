@@ -85,12 +85,13 @@ module Librevox
 
     # Delete a scheduled task by its id, or every task in a group. A call's
     # scheduled tasks (sched_hangup, sched_transfer, …) are grouped by its uuid.
-    # FreeSWITCH replies "+OK Deleted: <count>".
+    # Returns how many tasks were deleted, from FreeSWITCH's
+    # "+OK Deleted: <count>".
     # @example
-    #   socket.sched_del "592567a2-1be4-11df-a036-19bfdab2092f"
+    #   socket.sched_del "592567a2-1be4-11df-a036-19bfdab2092f" # => 1
     # @see http://wiki.freeswitch.org/wiki/Mod_commands#sched_del
     def sched_del(id)
-      command "sched_del", id
+      command("sched_del", id).content[/\A\+OK Deleted: (\d+)/, 1].to_i
     end
 
     # Bridge two call legs together. At least one leg must be answered.

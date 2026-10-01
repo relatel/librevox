@@ -110,9 +110,22 @@ class TestCommands < Minitest::Test
     assert_equal "+3600 1234-abcd ALLOTTED_TIMEOUT", cmd[:args]
   end
 
-  def test_sched_del
-    cmd = C.sched_del "1234-abcd"
-    assert_equal "sched_del", cmd[:name]
-    assert_equal "1234-abcd", cmd[:args]
+  # sched_del reads its count from FreeSWITCH's reply.
+  module SchedDelReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :sent
+
+    def command(name, args = "")
+      self.sent = [name, args]
+      Librevox::Protocol::Response.new("Content-Type: api/response", "+OK Deleted: 1\n")
+    end
+  end
+
+  def test_sched_del_returns_how_many_tasks_it_deleted
+    assert_equal 1, SchedDelReply.sched_del("1234-abcd")
+    assert_equal ["sched_del", "1234-abcd"], SchedDelReply.sent
   end
 end
