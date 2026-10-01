@@ -47,22 +47,22 @@ class TestInboundListenerWithFiltering < Minitest::Test
   end
 end
 
-class InboundBlockFilterTestListener < Librevox::Listener::Inbound
+class InboundLazyFilterTestListener < Librevox::Listener::Inbound
   events ['CUSTOM']
 
-  filters { { 'Caller-Context' => context } }
+  filters 'Caller-Context' => -> { context }
 
   def context
     'evaluated-on-connect'
   end
 end
 
-class TestInboundListenerWithBlockFilters < Minitest::Test
+class TestInboundListenerWithLazyFilters < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include Librevox::Test::ListenerHelpers
 
   def setup
-    @listener = InboundBlockFilterTestListener.new(MockConnection.new)
+    @listener = InboundLazyFilterTestListener.new(MockConnection.new)
     @session_task = Async { @listener.run_session }
     command_reply "Reply-Text" => "+OK accepted"
     command_reply "Reply-Text" => "+OK filter added"
@@ -74,8 +74,8 @@ class TestInboundListenerWithBlockFilters < Minitest::Test
     super
   end
 
-  # The block runs on the listener when the connection starts.
-  def test_a_filter_block_is_evaluated_on_connect
+  # The lambda runs on the listener when the connection starts.
+  def test_a_lambda_filter_value_is_evaluated_on_connect
     assert_equal "auth ClueCon", @listener.outgoing_data.shift
     assert_equal "filter Caller-Context evaluated-on-connect", @listener.outgoing_data.shift
     assert_equal "event plain CUSTOM", @listener.outgoing_data.shift

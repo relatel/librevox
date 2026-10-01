@@ -11,14 +11,14 @@ module Librevox
           @subscribe_events = events
         end
 
-        # The header filters to add on connecting, as a hash, or a block that
-        # returns one when the connection starts (for values not known when
-        # the class loads).
+        # The header filters to add on connecting. A value can be a lambda,
+        # run on the listener when the connection starts, for a value not
+        # known when the class loads.
         # @example
         #   filters "Event-Name" => "CHANNEL_PARK"
-        #   filters { { "variable_app" => App.current.name } }
-        def filters(filters = nil, &block)
-          @subscribe_filters = block || filters
+        #   filters "variable_app" => -> { App.current.name }
+        def filters(filters)
+          @subscribe_filters = filters
         end
       end
 
@@ -41,8 +41,8 @@ module Librevox
         # connection has no filters, so subscribing first would let the whole
         # node's events through until the filters land.
         filters = self.class.subscribe_filters || {}
-        filters = instance_exec(&filters) if filters.is_a?(Proc)
         filters.each do |header, values|
+          values = instance_exec(&values) if values.is_a?(Proc)
           [*values].each do |value|
             send_message "filter #{header} #{value}"
           end
