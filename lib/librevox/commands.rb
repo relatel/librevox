@@ -66,6 +66,15 @@ module Librevox
       command "uuid_park", uuid
     end
 
+    # Whether FreeSWITCH has a channel with this uuid. It answers "true" or
+    # "false".
+    # @example
+    #   socket.uuid_exists "592567a2-1be4-11df-a036-19bfdab2092f" # => true
+    # @see http://wiki.freeswitch.org/wiki/Mod_commands#uuid_exists
+    def uuid_exists(uuid)
+      command("uuid_exists", uuid).content == "true"
+    end
+
     # Hang up a call, with an optional cause.
     # @example
     #   socket.uuid_kill "592567a2-1be4-11df-a036-19bfdab2092f", "NO_ROUTE_DESTINATION"

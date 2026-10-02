@@ -125,6 +125,19 @@ class TestCommands < Minitest::Test
   end
 
   # global_getvar reads its value, or every value, from FreeSWITCH's reply.
+  module UuidExistsReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :output, :sent
+
+    def command(name, args = "")
+      self.sent = [name, args]
+      Librevox::Protocol::Response.new("Content-Type: api/response", output)
+    end
+  end
+
   module GlobalGetvarReply
     include Librevox::Commands
 
@@ -145,6 +158,15 @@ class TestCommands < Minitest::Test
   def test_global_getvar_reads_them_all
     GlobalGetvarReply.output = "hostname=node-1\ndomain=a=b\n\n"
     assert_equal({ "hostname" => "node-1", "domain" => "a=b" }, GlobalGetvarReply.global_getvar)
+  end
+
+  def test_uuid_exists_reads_true_and_false
+    UuidExistsReply.output = "true"
+    assert UuidExistsReply.uuid_exists("1234-abcd")
+    assert_equal ["uuid_exists", "1234-abcd"], UuidExistsReply.sent
+
+    UuidExistsReply.output = "false"
+    refute UuidExistsReply.uuid_exists("1234-abcd")
   end
 
   def test_sched_del_returns_how_many_tasks_it_deleted
