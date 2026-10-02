@@ -59,6 +59,23 @@ module Librevox
         reply
       end
 
+      # Fire an event into FreeSWITCH, for every ESL listener subscribed to it.
+      # Returns the Event-UUID FreeSWITCH gives the event, which every listener
+      # sees. A line break in a header would end the command early and send
+      # the rest as another command, so one raises ArgumentError.
+      # @example
+      #   sendevent "CUSTOM", "Event-Subclass" => "my::event", "Some-Header" => "value"
+      def sendevent(name, headers = {})
+        headers = headers.compact
+        if [name, *headers.flatten].any? { |part| part.to_s.match?(/[\r\n]/) }
+          raise ArgumentError, "sendevent headers can't contain line breaks"
+        end
+
+        lines = headers.map { |header, value| "#{header}: #{value}" }
+        reply = send_message(["sendevent #{name}", *lines].join("\n"))
+        reply.headers[:reply_text].delete_prefix("+OK ")
+      end
+
       def execute_app(app, uuid, args = nil, **params)
         event_uuid = SecureRandom.uuid
 
@@ -81,6 +98,8 @@ module Librevox
       end
 
       def receive_message(response)
+        # FreeSWITCH answers a connection's commands once each, in order, so a
+        # reply belongs to the oldest waiting command (see #send_message).
         if response.reply?
           @reply_promises.shift&.resolve(response)
           return

@@ -11,8 +11,14 @@ module Librevox
           @subscribe_events = events
         end
 
-        def filters(filters)
-          @subscribe_filters = filters
+        # The header filters to add on connecting, as a hash, or a block that
+        # returns one when the connection starts (for values not known when
+        # the class loads).
+        # @example
+        #   filters "Event-Name" => "CHANNEL_PARK"
+        #   filters { { "variable_app" => App.current.name } }
+        def filters(filters = nil, &block)
+          @subscribe_filters = block || filters
         end
       end
 
@@ -31,16 +37,20 @@ module Librevox
 
         send_message "auth #{@auth}"
 
-        events = self.class.subscribe_events || ['ALL']
-
-        send_message "event plain #{events.join(' ')}"
-
+        # Filters first: FreeSWITCH sends every subscribed event while a
+        # connection has no filters, so subscribing first would let the whole
+        # node's events through until the filters land.
         filters = self.class.subscribe_filters || {}
+        filters = instance_exec(&filters) if filters.is_a?(Proc)
         filters.each do |header, values|
           [*values].each do |value|
             send_message "filter #{header} #{value}"
           end
         end
+
+        events = self.class.subscribe_events || ['ALL']
+
+        send_message "event plain #{events.join(' ')}"
 
         connection_completed
       end

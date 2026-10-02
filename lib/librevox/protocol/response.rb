@@ -9,7 +9,7 @@ module Librevox
 
       def initialize(headers = "", content = "")
         @headers = parse_headers(headers)
-        @content = parse_content(content)
+        @content = api_response? ? content : parse_content(content)
       end
 
       def event?
@@ -42,15 +42,24 @@ module Librevox
 
       private
 
+      # Headers are raw, except in a reply FreeSWITCH builds from a whole
+      # event: its reply to an outbound socket's `connect` is the channel data
+      # (Event-Name: CHANNEL_DATA), URL-encoded like any event it serializes.
       def parse_headers(headers)
-        parse_kv(headers)
+        parsed = parse_kv(headers)
+        return parsed unless parsed.key?(:event_name)
+
+        parse_kv(headers, decode: true)
       end
 
+      # FreeSWITCH URL-encodes the header values of an event it serializes
+      # (text/event-plain), and nothing else it sends in a body: log/data and
+      # disconnect notices are raw. An event's own body is raw too.
       def parse_content(content)
         return content unless content.include?(":")
 
         headers, body = content.split("\n\n", 2)
-        parse_kv(headers, decode: true).merge(body: body || "")
+        parse_kv(headers, decode: event?).merge(body: body || "")
       end
 
       def parse_kv(string, decode: false)
