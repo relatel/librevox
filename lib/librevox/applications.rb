@@ -195,6 +195,14 @@ module Librevox
       application "record", args
     end
 
+    # Records the whole call to a file, in the background, until it ends.
+    # @example
+    #   record_session "/recordings/592567a2.wav"
+    # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_record_session
+    def record_session(path)
+      application "record_session", path
+    end
+
     # Redirect a channel to another endpoint. You must take care to not
     # redirect incompatible channels, as that wont have the desired effect.
     # I.e. if you redirect to a SIP URI, it should be a SIP channel.
@@ -216,6 +224,14 @@ module Librevox
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_respond
     def respond(code)
       application "respond", code.to_s
+    end
+
+    # Sends DTMF digits to the other side of the call.
+    # @example
+    #   send_dtmf "1234#"
+    # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_send_dtmf
+    def send_dtmf(digits)
+      application "send_dtmf", digits
     end
 
     # Sets a channel variable.

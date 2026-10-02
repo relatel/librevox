@@ -182,6 +182,18 @@ class TestApplications < Minitest::Test
     assert_equal "403", app[:args]
   end
 
+  def test_record_session
+    app = AppTest.record_session "/recordings/1234.wav"
+    assert_equal "record_session", app[:name]
+    assert_equal "/recordings/1234.wav", app[:args]
+  end
+
+  def test_send_dtmf
+    app = AppTest.send_dtmf "1234#"
+    assert_equal "send_dtmf", app[:name]
+    assert_equal "1234#", app[:args]
+  end
+
   def test_set
     app = AppTest.set("foo", "bar")
     assert_equal "set", app[:name]

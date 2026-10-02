@@ -65,6 +65,49 @@ class TestCommands < Minitest::Test
     assert_equal "some_cause", cmd[:args]
   end
 
+  def test_hupall_matching_a_variable
+    cmd = C.hupall "NORMAL_CLEARING", "queue_owner", "1234-abcd"
+    assert_equal "hupall", cmd[:name]
+    assert_equal "NORMAL_CLEARING queue_owner 1234-abcd", cmd[:args]
+  end
+
+  def test_uuid_answer
+    cmd = C.uuid_answer "1234-abcd"
+    assert_equal "uuid_answer", cmd[:name]
+    assert_equal "1234-abcd", cmd[:args]
+  end
+
+  def test_uuid_break
+    assert_equal "1234-abcd", C.uuid_break("1234-abcd")[:args]
+    assert_equal "1234-abcd all", C.uuid_break("1234-abcd", all: true)[:args]
+  end
+
+  def test_uuid_transfer
+    cmd = C.uuid_transfer "1234-abcd", "9001", "XML", "default"
+    assert_equal "uuid_transfer", cmd[:name]
+    assert_equal "1234-abcd 9001 XML default", cmd[:args]
+
+    cmd = C.uuid_transfer "1234-abcd", "playback:hello.wav,park", "inline"
+    assert_equal "1234-abcd playback:hello.wav,park inline", cmd[:args]
+  end
+
+  def test_uuid_setvar
+    cmd = C.uuid_setvar "1234-abcd", "hold_music", "local_stream://moh"
+    assert_equal "uuid_setvar", cmd[:name]
+    assert_equal "1234-abcd hold_music local_stream://moh", cmd[:args]
+  end
+
+  def test_uuid_setvar_multi
+    cmd = C.uuid_setvar_multi "1234-abcd", "call_timeout" => 30, "continue_on_fail" => true
+    assert_equal "uuid_setvar_multi", cmd[:name]
+    assert_equal "1234-abcd call_timeout=30;continue_on_fail=true", cmd[:args]
+  end
+
+  # FreeSWITCH splits the variables on ";".
+  def test_uuid_setvar_multi_refuses_a_value_with_a_semicolon
+    assert_raises(ArgumentError) { C.uuid_setvar_multi "1234-abcd", "a" => "1;2" }
+  end
+
   def test_hash_insert
     cmd = C.hash :insert, :firmafon, :foo, "some value or other"
     assert_equal "hash", cmd[:name]
@@ -136,6 +179,31 @@ class TestCommands < Minitest::Test
       self.sent = [name, args]
       Librevox::Protocol::Response.new("Content-Type: api/response", output)
     end
+  end
+
+  module UuidGetvarReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :output, :sent
+
+    def command(name, args = "")
+      self.sent = [name, args]
+      Librevox::Protocol::Response.new("Content-Type: api/response", output)
+    end
+  end
+
+  def test_uuid_getvar_reads_a_value
+    UuidGetvarReply.output = "local_stream://moh"
+    assert_equal "local_stream://moh", UuidGetvarReply.uuid_getvar("1234-abcd", "hold_music")
+    assert_equal ["uuid_getvar", "1234-abcd hold_music"], UuidGetvarReply.sent
+  end
+
+  # FreeSWITCH answers "_undef_" for a variable that isn't set.
+  def test_uuid_getvar_is_nil_when_unset
+    UuidGetvarReply.output = "_undef_"
+    assert_nil UuidGetvarReply.uuid_getvar("1234-abcd", "nope")
   end
 
   module GlobalGetvarReply
