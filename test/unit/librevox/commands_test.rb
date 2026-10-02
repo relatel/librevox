@@ -124,6 +124,29 @@ class TestCommands < Minitest::Test
     end
   end
 
+  # global_getvar reads its value, or every value, from FreeSWITCH's reply.
+  module GlobalGetvarReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :output
+
+    def command(_name, _args = "")
+      Librevox::Protocol::Response.new("Content-Type: api/response", output)
+    end
+  end
+
+  def test_global_getvar_reads_one
+    GlobalGetvarReply.output = "node-1\n"
+    assert_equal "node-1", GlobalGetvarReply.global_getvar("hostname")
+  end
+
+  def test_global_getvar_reads_them_all
+    GlobalGetvarReply.output = "hostname=node-1\ndomain=a=b\n\n"
+    assert_equal({ "hostname" => "node-1", "domain" => "a=b" }, GlobalGetvarReply.global_getvar)
+  end
+
   def test_sched_del_returns_how_many_tasks_it_deleted
     assert_equal 1, SchedDelReply.sched_del("1234-abcd")
     assert_equal ["sched_del", "1234-abcd"], SchedDelReply.sent
