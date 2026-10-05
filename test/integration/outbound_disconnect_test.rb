@@ -70,7 +70,7 @@ module DisconnectTestHelpers
 
     # myevents
     msg = socket.gets("\n\n")
-    assert_equal "myevents", msg&.strip
+    assert_equal "myevents json", msg&.strip
     socket.write("Content-Type: command/reply\nReply-Text: +OK Events Enabled\n\n")
 
     # linger

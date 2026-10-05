@@ -30,7 +30,7 @@ class TestStandaloneStart < Minitest::Test
       assert_equal "connect", socket.gets("\n\n")&.strip
       socket.write("Content-Type: command/reply\nUnique-ID: 1234\n\n")
 
-      assert_equal "myevents", socket.gets("\n\n")&.strip
+      assert_equal "myevents json", socket.gets("\n\n")&.strip
       socket.write("Content-Type: command/reply\nReply-Text: +OK\n\n")
 
       assert_equal "linger", socket.gets("\n\n")&.strip

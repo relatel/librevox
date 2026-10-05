@@ -20,6 +20,7 @@ Documentation: https://relatel.github.io/librevox
 - [Configuration](#configuration)
 - [Event Socket Protocol](#event-socket-protocol)
   - [Outbound session lifecycle](#outbound-session-lifecycle)
+  - [Event format](#event-format)
   - [sendmsg and application execution](#sendmsg-and-application-execution)
   - [event-lock](#event-lock)
   - [Two fibers per connection](#two-fibers-per-connection)
@@ -225,12 +226,26 @@ application logic runs:
 Listener → FS:  connect
 FS → Listener:  (channel data — becomes @session)
 
-Listener → FS:  myevents
+Listener → FS:  myevents json
 FS → Listener:  command/reply +OK
 
 Listener → FS:  linger
 FS → Listener:  command/reply +OK  → triggers session_initiated
 ```
+
+### Event format
+
+Librevox subscribes to events as JSON (`myevents json`, and `event json` on an
+inbound connection), which the json gem parses in C. A JSON event becomes the
+same hash a plain event would: header names are symbols
+(`:caller_caller_id_number`), the body is `:body`, and an array header is
+written as a plain event writes it (`"ARRAY::a|:b"`). JSON values are not
+URL-encoded, so they need no decoding. Two values differ from a plain event:
+an empty one is `""` rather than `"_undef_"`, and values are UTF-8 strings
+rather than binary ones.
+
+Plain events are still read: the outbound `connect` reply is always plain and
+URL-encoded, whatever format the listener subscribes to.
 
 ### sendmsg and application execution
 

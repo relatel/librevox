@@ -50,7 +50,7 @@ module Librevox
 
         events = self.class.subscribe_events || ['ALL']
 
-        send_message "event plain #{events.join(' ')}"
+        send_message "event json #{events.join(' ')}"
 
         connection_completed
       end

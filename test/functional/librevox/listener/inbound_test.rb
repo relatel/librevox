@@ -31,7 +31,7 @@ class TestInboundListener < Minitest::Test
 
   def test_sends_auth_and_event_subscription
     assert_equal "auth ClueCon", @listener.outgoing_data.shift
-    assert_equal "event plain ALL", @listener.outgoing_data.shift
+    assert_equal "event json ALL", @listener.outgoing_data.shift
     assert_nil @listener.outgoing_data.shift
   end
 

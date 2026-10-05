@@ -21,7 +21,7 @@ module Librevox
       def run_session
         @session = send_message("connect").headers
 
-        send_message "myevents"
+        send_message "myevents json"
         send_message "linger"
 
         session_initiated
