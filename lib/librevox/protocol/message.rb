@@ -38,12 +38,13 @@ module Librevox
       end
 
       # A command line followed by "Name: value" header lines. A line break
-      # inside one of them would end the message early and send the rest as
-      # a command of its own, so one raises ArgumentError.
+      # (\n, or \r as in \r\n) inside one of them would end the message early
+      # and send the rest as a command of its own, so one raises
+      # ArgumentError.
       def self.command(line, headers)
         lines = [line, *headers.map { |name, value| "#{name}: #{value}" }]
 
-        if lines.any? { |part| part.include?("\n") }
+        if lines.any? { |part| part.match?(/[\r\n]/) }
           raise ArgumentError, "a message to FreeSWITCH can't contain line breaks"
         end
 

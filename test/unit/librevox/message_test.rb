@@ -38,4 +38,9 @@ class TestMessage < Minitest::Test
       Message.execute_app("1234-abcd", "set", "note=a\n\nevent plain ALL")
     end
   end
+
+  def test_refuses_a_carriage_return
+    assert_raises(ArgumentError) { Message.sendevent("CUSTOM", "Some-Header" => "x\rbgapi status") }
+    assert_raises(ArgumentError) { Message.execute_app("1234-abcd", "set", "note=a\r") }
+  end
 end
