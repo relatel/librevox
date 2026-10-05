@@ -2,6 +2,10 @@
 
 module Librevox
   module Protocol
+    # FreeSWITCH frames every message the way HTTP does: a block of
+    # "Name: value" headers ending in a blank line, then Content-Length
+    # bytes of content. Connection reads and writes those frames;
+    # Response turns one into headers and content.
     class Connection
       def initialize(stream)
         @stream = stream
