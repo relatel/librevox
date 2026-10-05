@@ -43,14 +43,14 @@ module Librevox
         filters = self.class.subscribe_filters || {}
         filters = instance_exec(&filters) if filters.is_a?(Proc)
         filters.each do |header, values|
-          [*values].each do |value|
+          Array(values).each do |value|
             send_message "filter #{header} #{value}"
           end
         end
 
         events = self.class.subscribe_events || ['ALL']
 
-        send_message "event plain #{events.join(' ')}"
+        send_message "event json #{events.join(' ')}"
 
         connection_completed
       end

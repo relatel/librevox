@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'async'
 require 'io/stream'
 require 'io/endpoint/host_endpoint'
 
@@ -16,12 +17,17 @@ module Librevox
       @options = options
     end
 
+    # Librevox.start runs listeners inside a reactor. Calling MyInbound.start
+    # directly has none, so Sync starts one; inside a reactor it just runs
+    # the block.
     def run
-      loop do
-        @endpoint.connect(&method(:connect))
-      rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET, ResponseError => e
-        Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
-        sleep 1
+      Sync do
+        loop do
+          @endpoint.connect(&method(:connect))
+        rescue IOError, Errno::ECONNREFUSED, Errno::ECONNRESET, ResponseError => e
+          Librevox.logger.error "Connection lost: #{e.message}. Reconnecting in 1s."
+          sleep 1
+        end
       end
     end
 

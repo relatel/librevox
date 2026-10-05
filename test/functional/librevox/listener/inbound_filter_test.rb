@@ -42,7 +42,7 @@ class TestInboundListenerWithFiltering < Minitest::Test
     assert_equal "filter Caller-Context default", @listener.outgoing_data.shift
     assert_equal "filter Caller-Context example", @listener.outgoing_data.shift
     assert_equal "filter Caller-Privacy-Hide-Name no", @listener.outgoing_data.shift
-    assert_equal "event plain CUSTOM CHANNEL_EXECUTE", @listener.outgoing_data.shift
+    assert_equal "event json CUSTOM CHANNEL_EXECUTE", @listener.outgoing_data.shift
     assert_nil @listener.outgoing_data.shift
   end
 end
@@ -78,6 +78,6 @@ class TestInboundListenerWithBlockFilters < Minitest::Test
   def test_a_filter_block_is_evaluated_on_connect
     assert_equal "auth ClueCon", @listener.outgoing_data.shift
     assert_equal "filter Caller-Context evaluated-on-connect", @listener.outgoing_data.shift
-    assert_equal "event plain CUSTOM", @listener.outgoing_data.shift
+    assert_equal "event json CUSTOM", @listener.outgoing_data.shift
   end
 end

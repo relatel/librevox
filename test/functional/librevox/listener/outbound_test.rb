@@ -36,7 +36,7 @@ class TestOutboundHandshake < Minitest::Test
 
   def test_sends_connect_myevents_linger_in_order
     assert_equal "connect",  @listener.outgoing_data.shift
-    assert_equal "myevents", @listener.outgoing_data.shift
+    assert_equal "myevents json", @listener.outgoing_data.shift
     assert_equal "linger",   @listener.outgoing_data.shift
     assert_nil @listener.outgoing_data.shift
   end

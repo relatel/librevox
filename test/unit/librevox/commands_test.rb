@@ -247,4 +247,13 @@ class TestCommands < Minitest::Test
     assert_equal 1, SchedDelReply.sched_del("1234-abcd")
     assert_equal ["sched_del", "1234-abcd"], SchedDelReply.sent
   end
+
+  # Without arguments, hash is Ruby's Object#hash, so command sockets can be
+  # Hash keys and live in Sets without sending anything to FreeSWITCH.
+  def test_hash_without_arguments_is_object_hash
+    socket = Librevox::CommandSocket.new(connect: false)
+
+    assert_kind_of Integer, socket.hash
+    assert_includes Set[socket], socket
+  end
 end
