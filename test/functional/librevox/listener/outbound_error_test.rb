@@ -20,6 +20,14 @@ class OutboundListenerWithErrorApp < Librevox::Listener::Outbound
   end
 end
 
+class OutboundListenerWithFailingApi < Librevox::Listener::Outbound
+  attr_reader :reply
+
+  def session_initiated
+    @reply = api.sample_cmd "originate", "user/nobody &park"
+  end
+end
+
 class TestOutboundApplicationError < Minitest::Test
   prepend Librevox::Test::AsyncTest
   include OutboundSetupHelpers
@@ -64,5 +72,31 @@ class TestOutboundUnhandledApplicationError < Minitest::Test
       @session_task.wait
     end
     assert_equal "-ERR invalid command", error.message
+  end
+end
+
+# A failed api command is returned so the caller can read FreeSWITCH's
+# output, rather than raised like a failed application.
+class TestOutboundFailedApiCommand < Minitest::Test
+  prepend Librevox::Test::AsyncTest
+  include OutboundSetupHelpers
+  include Librevox::Test::Matchers
+
+  def setup
+    setup_outbound OutboundListenerWithFailingApi
+  end
+
+  def teardown
+    teardown_outbound
+    super
+  end
+
+  def test_failed_api_command_is_returned
+    assert_send_command @listener, "api originate user/nobody &park"
+
+    api_response body: "-ERR NO_ROUTE_DESTINATION\n"
+
+    assert @listener.reply.error?
+    assert_equal "-ERR NO_ROUTE_DESTINATION\n", @listener.reply.content
   end
 end

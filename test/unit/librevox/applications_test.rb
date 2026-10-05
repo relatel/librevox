@@ -223,4 +223,16 @@ class TestApplications < Minitest::Test
     assert_equal "unset", app[:name]
     assert_equal "foo", app[:args]
   end
+
+  def test_misspelled_option_raises
+    assert_raises(ArgumentError) do
+      AppTest.play_and_get_digits "please-enter", "wrong-try-again", tiemout: 100
+    end
+  end
+
+  def test_bind_meta_app_requires_key
+    assert_raises(ArgumentError) do
+      AppTest.bind_meta_app listen_to: :a, respond_on: :s, application: "hangup"
+    end
+  end
 end

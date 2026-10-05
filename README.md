@@ -30,7 +30,7 @@ Documentation: https://relatel.github.io/librevox
 
 You should be familiar with [mod_event_socket](https://developer.signalwire.com/freeswitch/FreeSWITCH-Explained/Modules/mod_event_socket_1048924/) and the differences between inbound and outbound event sockets before getting started.
 
-Requires Ruby 3.0+.
+Requires Ruby 3.2+.
 
 ## Installation
 

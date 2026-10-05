@@ -55,7 +55,10 @@ module Librevox
         end
 
         reply = promise.wait
-        raise ResponseError, reply.headers[:reply_text] if reply.error?
+
+        # A failed api command is returned like any other reply, so callers
+        # can read its output; check response.error? to tell.
+        raise ResponseError, reply.headers[:reply_text] if reply.command_reply? && reply.error?
 
         reply
       end
@@ -150,7 +153,9 @@ module Librevox
       end
 
       def invoke_event_hooks(resp)
-        self.class.hooks[resp.event.downcase.to_sym].each do |block|
+        # fetch, not [], so looking up an event without hooks leaves the
+        # class's hook table alone.
+        self.class.hooks.fetch(resp.event.downcase.to_sym, []).each do |block|
           instance_exec(resp, &block)
         end
       end

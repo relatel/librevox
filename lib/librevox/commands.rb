@@ -23,7 +23,12 @@ module Librevox
     #   socket.hash :insert, :realm, :key, "value"
     #   socket.hash :select, :realm, :key
     #   socket.hash :delete, :realm, :key
+    #
+    # Called without arguments this is Ruby's own Object#hash, so command
+    # sockets and listeners can still be used as Hash keys and in Sets.
     def hash(*args)
+      return super() if args.empty?
+
       command "hash", args.join("/")
     end
 
@@ -32,16 +37,11 @@ module Librevox
     #   socket.originate 'sofia/user/coltrane', extension: "1234"
     # @example With :dialplan and :context
     # @see http://wiki.freeswitch.org/wiki/Mod_commands#originate
-    def originate(url, args = {})
-      extension = args.delete(:extension)
-      dialplan  = args.delete(:dialplan)
-      context   = args.delete(:context)
+    def originate(url, extension: nil, dialplan: nil, context: nil, **variables)
+      variables = variables.map { |name, value| "#{name}=#{value}" }.join(",")
+      destination = [url, extension, dialplan, context].compact.join(" ")
 
-      vars = args.map {|k,v| "#{k}=#{v}"}.join(",")
-
-      arg_string = "{#{vars}}" +
-        [url, extension, dialplan, context].compact.join(" ")
-      command "originate", arg_string
+      command "originate", "{#{variables}}#{destination}"
     end
 
     # FreeSWITCH control messages.

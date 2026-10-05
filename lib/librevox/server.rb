@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'async'
 require 'io/stream'
 require 'io/endpoint/host_endpoint'
 
@@ -18,8 +19,13 @@ module Librevox
       @options = options
     end
 
+    # Librevox.start runs listeners inside a reactor. Calling MyOutbound.start
+    # directly has none, so Sync starts one; inside a reactor it just runs
+    # the block.
     def run
-      @endpoint.accept(&method(:accept))
+      Sync do
+        @endpoint.accept(&method(:accept))
+      end
     end
 
     private

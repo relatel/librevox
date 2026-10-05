@@ -58,8 +58,13 @@ module Librevox
         content[:event_name] if event?
       end
 
+      # A failed command says so in its Reply-Text header. A failed api
+      # command says so at the start of its output.
       def error?
-        reply? && headers[:reply_text]&.start_with?("-ERR")
+        return false unless reply?
+        return true if headers[:reply_text]&.start_with?("-ERR")
+
+        api_response? && content.start_with?("-ERR")
       end
     end
   end

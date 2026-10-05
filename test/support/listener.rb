@@ -114,6 +114,12 @@ module EventTests
     assert_equal "got event: HOOK_WITH_ARG", @listener.read_data
   end
 
+  def test_event_without_hooks_adds_no_hook_entry
+    event "UNHOOKED_EVENT"
+
+    refute @class.hooks.key?(:unhooked_event)
+  end
+
   def test_calls_on_event_for_any_event
     event "THIRD_EVENT"
 

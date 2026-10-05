@@ -2,6 +2,7 @@
 
 require 'socket'
 require 'io/stream'
+require 'librevox'
 
 module Librevox
   class CommandSocket
@@ -35,6 +36,8 @@ module Librevox
       while (msg = @connection.receive_data)
         return msg if msg.reply?
       end
+
+      raise ConnectionError, "Connection closed"
     end
 
     def application(app, uuid, args = nil, **params)
