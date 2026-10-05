@@ -55,7 +55,7 @@ module Librevox
         end
 
         reply = promise.wait
-        raise ResponseError, reply.headers[:reply_text] if reply.error?
+        raise ResponseError, reply.reply_text.strip if reply.error?
 
         reply
       end

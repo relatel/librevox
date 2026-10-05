@@ -63,8 +63,14 @@ module Librevox
         content[:event_name] if event?
       end
 
+      # What FreeSWITCH says in reply: a command's Reply-Text, or an api
+      # command's output.
+      def reply_text
+        headers[:reply_text] || (content if api_response?)
+      end
+
       def error?
-        reply? && headers[:reply_text]&.start_with?("-ERR")
+        reply? && reply_text.to_s.start_with?("-ERR")
       end
     end
   end
