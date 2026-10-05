@@ -6,8 +6,6 @@ require 'uri'
 module Librevox
   module Protocol
     class Response < Data.define(:headers, :content)
-      EVENT_TYPES = %w[text/event-json text/event-plain].freeze
-
       def initialize(headers: "", content: "")
         # The reply to an outbound `connect` is the channel data, URL-encoded
         # like a plain event.
@@ -55,7 +53,7 @@ module Librevox
 
       def content_type = headers[:content_type]
 
-      def event?             = EVENT_TYPES.include?(content_type)
+      def event?             = %w[text/event-json text/event-plain].include?(content_type)
       def api_response?      = content_type == "api/response"
       def command_reply?     = content_type == "command/reply"
       def disconnect_notice? = content_type == "text/disconnect-notice"
