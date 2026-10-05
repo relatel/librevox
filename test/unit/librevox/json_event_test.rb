@@ -64,6 +64,18 @@ class TestJsonEvent < Minitest::Test
     assert_equal "", content[:body]
   end
 
+  # FreeSWITCH adds some headers twice (CHANNEL_DESTROY's Hangup-Cause), and
+  # writes both into the JSON. The last one counts, as in a plain event.
+  def test_a_header_sent_twice_keeps_the_last_one_like_a_plain_event
+    plain_event = "Event-Name: CHANNEL_DESTROY\nHangup-Cause: NONE\nHangup-Cause: NORMAL_CLEARING"
+    json_event = '{"Event-Name":"CHANNEL_DESTROY","Hangup-Cause":"NONE","Hangup-Cause":"NORMAL_CLEARING"}'
+    plain = Response.new("Content-Type: text/event-plain", plain_event).content
+    json = Response.new("Content-Type: text/event-json", json_event).content
+
+    assert_equal "NORMAL_CLEARING", json[:hangup_cause]
+    assert_equal plain, json
+  end
+
   # Caller names from older trunks can be Latin-1. Like a plain event, a JSON
   # event keeps the bytes instead of failing to parse.
   def test_invalid_utf8_is_kept_rather_than_raising

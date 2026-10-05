@@ -42,9 +42,10 @@ module Librevox
       end
 
       # A JSON event, with the same names as a plain event and its body as
-      # :body (see the README's "Event format").
+      # :body (see the README's "Event format"). FreeSWITCH writes a header
+      # it added twice twice; the last one counts, as in a plain event.
       def self.parse_json(content)
-        event = JSON.parse(content).transform_keys { |name| key(name) }
+        event = JSON.parse(content, allow_duplicate_key: true).transform_keys { |name| key(name) }
         event[:body] = event.delete(:_body) || ""
         event
       end
