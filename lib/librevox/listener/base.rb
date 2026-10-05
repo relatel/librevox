@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require 'async/semaphore'
+require 'async'
+require 'async/promise'
 require 'securerandom'
 require 'set'
 
@@ -22,7 +23,7 @@ module Librevox
         @reply_promises = []
         @app_promises = {}
         @event_tasks = Set.new
-        @write_lock = Async::Semaphore.new(1)
+        @write_lock = Thread::Mutex.new
       end
 
       # Exposes an instance of {CommandDelegate}, which includes {Librevox::Commands}.
@@ -48,7 +49,7 @@ module Librevox
         # command can be observed before its promise is queued. Must not cover
         # promise.wait — holding the lock while awaiting a reply would deadlock
         # every other sender.
-        @write_lock.acquire do
+        @write_lock.synchronize do
           @connection.send_data(msg)
           @reply_promises << promise
         end
@@ -79,20 +80,10 @@ module Librevox
       def execute_app(app, uuid, args = nil, **params)
         event_uuid = SecureRandom.uuid
 
-        headers = {
-            event_lock:        true,
-            call_command:      "execute",
-            execute_app_name:  app,
-            execute_app_arg:   args,
-            event_uuid:        event_uuid,
-          }
-          .merge(params)
-          .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
-
         promise = Async::Promise.new
         @app_promises[event_uuid] = promise
 
-        send_message "sendmsg #{uuid}\n#{headers.join("\n")}"
+        send_message Protocol::Message.execute_app(uuid, app, args, event_uuid:, **params)
 
         promise.wait
       end
@@ -159,10 +150,7 @@ module Librevox
       end
 
       def invoke_event_hooks(resp)
-        event_name = resp.event.downcase.to_sym
-        hooks = self.class.hooks[event_name]
-
-        hooks.each do |block|
+        self.class.hooks[resp.event.downcase.to_sym].each do |block|
           instance_exec(resp, &block)
         end
       end

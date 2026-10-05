@@ -31,14 +31,12 @@ module Librevox
       def session_initiated
       end
 
-      def application(app, args = nil, **params)
-        variable_name = params.delete(:variable)
-
+      def application(app, args = nil, variable: nil, **params)
         response = execute_app(app, session[:unique_id], args, **params)
-
         @session = response.content
 
-        variable(variable_name) if variable_name
+        # Apps that collect input, like read, leave it in a channel variable.
+        self.variable(variable) if variable
       end
 
       def variable(name)

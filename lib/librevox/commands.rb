@@ -10,10 +10,8 @@ module Librevox
     # @example
     #   socket.command "fsctl", "hupall normal_clearing"
     # @see http://wiki.freeswitch.org/wiki/Mod_commands
-    def command(name, args = "")
-      parts = ["api", name]
-      parts << args if args && !args.empty?
-      parts.join(" ")
+    def command(name, args = nil)
+      "api #{name} #{args}".strip
     end
 
     def status
