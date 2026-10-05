@@ -91,6 +91,12 @@ class TestCommands < Minitest::Test
     assert_equal "1234-abcd playback:hello.wav,park inline", cmd[:args]
   end
 
+  def test_uuid_recv_dtmf
+    cmd = C.uuid_recv_dtmf "1234-abcd", "12"
+    assert_equal "uuid_recv_dtmf", cmd[:name]
+    assert_equal "1234-abcd 12", cmd[:args]
+  end
+
   def test_uuid_setvar
     cmd = C.uuid_setvar "1234-abcd", "hold_music", "local_stream://moh"
     assert_equal "uuid_setvar", cmd[:name]

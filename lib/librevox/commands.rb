@@ -100,6 +100,15 @@ module Librevox
       command "uuid_transfer", [uuid, destination, dialplan, context].compact.join(" ")
     end
 
+    # Queue digits on a channel as if the caller had pressed them. FreeSWITCH
+    # reports them with DTMF-Source APP.
+    # @example
+    #   socket.uuid_recv_dtmf "592567a2-1be4-11df-a036-19bfdab2092f", "12"
+    # @see http://wiki.freeswitch.org/wiki/Mod_commands#uuid_recv_dtmf
+    def uuid_recv_dtmf(uuid, digits)
+      command "uuid_recv_dtmf", "#{uuid} #{digits}"
+    end
+
     # Set a channel variable.
     # @example
     #   socket.uuid_setvar "592567a2-1be4-11df-a036-19bfdab2092f", "hold_music", "local_stream://moh"
