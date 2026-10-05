@@ -129,14 +129,4 @@ class TestResponse < Minitest::Test
     response = Librevox::Protocol::Response.new("Content-Type: command/reply", "Foo: Bar")
     refute response.error?
   end
-
-  def test_error_on_api_response_with_err_output
-    response = Librevox::Protocol::Response.new("Content-Type: api/response", "-ERR NO_ROUTE_DESTINATION\n")
-    assert response.error?
-  end
-
-  def test_not_error_on_api_response_with_ok_output
-    response = Librevox::Protocol::Response.new("Content-Type: api/response", "+OK 1234-abcd\n")
-    refute response.error?
-  end
 end

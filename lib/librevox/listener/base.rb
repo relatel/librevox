@@ -55,10 +55,7 @@ module Librevox
         end
 
         reply = promise.wait
-
-        # A failed api command is returned like any other reply, so callers
-        # can read its output; check response.error? to tell.
-        raise ResponseError, reply.headers[:reply_text] if reply.command_reply? && reply.error?
+        raise ResponseError, reply.headers[:reply_text] if reply.error?
 
         reply
       end

@@ -6,18 +6,28 @@ require 'uri'
 module Librevox
   module Protocol
     class Response < Data.define(:headers, :content)
-      # The content types of an event: librevox subscribes to JSON events, and
-      # still reads plain ones.
-      EVENT_TYPES = ["text/event-json", "text/event-plain"].freeze
+      EVENT_TYPES = %w[text/event-json text/event-plain].freeze
 
-      # Header names become symbols, so "Caller-Caller-ID-Number" is
-      # available as :caller_caller_id_number.
-      def self.key(name)
-        name.downcase.gsub(/[^a-z0-9_]/, '_').to_sym
+      def initialize(headers: "", content: "")
+        # The reply to an outbound `connect` is the channel data, URL-encoded
+        # like a plain event.
+        headers = Response.parse(headers, decode: headers.match?(/^Event-Name:/i))
+
+        super(headers:, content: Response.parse_content(headers[:content_type], content))
       end
 
-      # Turns "Name: value" lines into a hash.
-      def self.parse_kv(text, decode: false)
+      # How each kind of content becomes the response's content.
+      def self.parse_content(content_type, content)
+        case content_type
+        when "text/event-json"  then parse_json(content)
+        when "text/event-plain" then parse_with_body(content, decode: true)
+        when "api/response"     then content
+        else content.include?(":") ? parse_with_body(content) : content
+        end
+      end
+
+      # "Name: value" lines, with names as symbols: :caller_caller_id_number.
+      def self.parse(text, decode: false)
         text.each_line(chomp: true).each_with_object({}) do |line, hash|
           name, value = line.split(':', 2)
           next unless value
@@ -27,62 +37,29 @@ module Librevox
         end
       end
 
-      # FreeSWITCH sends a JSON event (text/event-json) as one object, with
-      # the same header names as a plain event and its body under "_body".
-      # Nothing in it is URL-encoded. It becomes the hash a plain event gives,
-      # so listeners see the same values in either format, with two
-      # differences: an empty value is "" where a plain event says
-      # "_undef_", and values are UTF-8 strings rather than binary ones.
-      # Invalid UTF-8, like a Latin-1 caller name, is kept as it is.
-      def self.parse_json_event(content)
+      # Headers, then a blank line and a body.
+      def self.parse_with_body(content, decode: false)
+        headers, body = content.split("\n\n", 2)
+        parse(headers, decode:).merge(body: body || "")
+      end
+
+      # A JSON event, as the hash the plain event would have given (see the
+      # README's "Event format").
+      def self.parse_json(content)
         event = JSON.parse(content)
         body = event.delete("_body") || ""
 
-        headers = event.to_h do |name, value|
-          value = plain_array(value) if value.is_a?(Array)
-          [key(name), value]
-        end
-
-        headers.merge(body:)
+        event.to_h { |name, value| [key(name), as_plain(value)] }.merge(body:)
       end
 
-      # An array header the way a plain event writes it: its values joined
-      # with "|:" behind "ARRAY::", or a single value as it is.
-      def self.plain_array(values)
-        return values.first.to_s if values.one?
+      # A plain event writes several values as "ARRAY::a|:b", one as it is.
+      def self.as_plain(value)
+        return value unless value.is_a?(Array)
 
-        "ARRAY::#{values.join("|:")}"
+        value.one? ? value.first : "ARRAY::#{value.join("|:")}"
       end
 
-      # Headers are raw, except in a reply FreeSWITCH builds from a whole
-      # event: its reply to an outbound socket's `connect` is the channel data
-      # (Event-Name: CHANNEL_DATA), URL-encoded like any event it serializes.
-      def self.parse_headers(text)
-        headers = parse_kv(text)
-        return headers unless headers.key?(:event_name)
-
-        parse_kv(text, decode: true)
-      end
-
-      # The content of an api/response is the command's output, kept as text.
-      # Other content that looks like headers is a block of headers,
-      # optionally followed by a blank line and a body. FreeSWITCH URL-encodes
-      # the header values of an event it serializes (text/event-plain), and
-      # nothing else it sends in a body: log/data and disconnect notices are
-      # raw. An event's own body is raw too.
-      def self.parse_content(content_type, content)
-        return content if content_type == "api/response"
-        return parse_json_event(content) if content_type == "text/event-json"
-        return content unless content.include?(":")
-
-        headers, body = content.split("\n\n", 2)
-        parse_kv(headers, decode: content_type == "text/event-plain").merge(body: body || "")
-      end
-
-      def initialize(headers: "", content: "")
-        headers = Response.parse_headers(headers)
-        super(headers:, content: Response.parse_content(headers[:content_type], content))
-      end
+      def self.key(name) = name.downcase.gsub(/[^a-z0-9_]/, '_').to_sym
 
       def content_type = headers[:content_type]
 
@@ -96,13 +73,8 @@ module Librevox
         content[:event_name] if event?
       end
 
-      # A failed command says so in its Reply-Text header. A failed api
-      # command says so at the start of its output.
       def error?
-        return false unless reply?
-        return true if headers[:reply_text]&.start_with?("-ERR")
-
-        api_response? && content.start_with?("-ERR")
+        reply? && headers[:reply_text]&.start_with?("-ERR")
       end
     end
   end
