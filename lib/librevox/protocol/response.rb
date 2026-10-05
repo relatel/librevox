@@ -11,9 +11,9 @@ module Librevox
       def initialize(headers: "", content: "")
         # The reply to an outbound `connect` is the channel data, URL-encoded
         # like a plain event.
-        headers = Response.parse(headers, decode: headers.match?(/^Event-Name:/i))
+        headers = self.class.parse(headers, decode: headers.match?(/^Event-Name:/i))
 
-        super(headers:, content: Response.parse_content(headers[:content_type], content))
+        super(headers:, content: self.class.parse_content(headers[:content_type], content))
       end
 
       # How each kind of content becomes the response's content.
@@ -43,20 +43,12 @@ module Librevox
         parse(headers, decode:).merge(body: body || "")
       end
 
-      # A JSON event, as the hash the plain event would have given (see the
-      # README's "Event format").
+      # A JSON event, with the same names as a plain event and its body as
+      # :body (see the README's "Event format").
       def self.parse_json(content)
-        event = JSON.parse(content)
-        body = event.delete("_body") || ""
-
-        event.to_h { |name, value| [key(name), as_plain(value)] }.merge(body:)
-      end
-
-      # A plain event writes several values as "ARRAY::a|:b", one as it is.
-      def self.as_plain(value)
-        return value unless value.is_a?(Array)
-
-        value.one? ? value.first : "ARRAY::#{value.join("|:")}"
+        event = JSON.parse(content).transform_keys { |name| key(name) }
+        event[:body] = event.delete(:_body) || ""
+        event
       end
 
       def self.key(name) = name.downcase.gsub(/[^a-z0-9_]/, '_').to_sym

@@ -3,9 +3,8 @@
 require_relative '../../test_helper'
 require 'json'
 
-# librevox subscribes to JSON events. A JSON event must become the same hash
-# as the plain event FreeSWITCH would otherwise have sent, so listeners don't
-# notice the format.
+# librevox subscribes to JSON events. A JSON event becomes the hash the plain
+# event would have given, except that an array header is an Array.
 class TestJsonEvent < Minitest::Test
   Response = Librevox::Protocol::Response
 
@@ -27,11 +26,12 @@ class TestJsonEvent < Minitest::Test
     "variable_sip_h_diversion" => ["<sip:+4533333333@c>"],
   )
 
-  def test_json_event_gives_the_same_hash_as_the_plain_event
-    plain = Response.new("Content-Type: text/event-plain", PLAIN)
-    json = Response.new("Content-Type: text/event-json", JSON_EVENT)
+  def test_json_event_gives_the_same_hash_as_the_plain_event_but_with_arrays
+    plain = Response.new("Content-Type: text/event-plain", PLAIN).content
+    json = Response.new("Content-Type: text/event-json", JSON_EVENT).content
 
-    assert_equal plain.content, json.content
+    arrays = %i[variable_sip_i_p_asserted_identity variable_sip_h_diversion]
+    assert_equal plain.except(*arrays), json.except(*arrays)
   end
 
   def test_json_event_is_an_event
@@ -41,13 +41,13 @@ class TestJsonEvent < Minitest::Test
     assert_equal "CHANNEL_EXECUTE_COMPLETE", response.event
   end
 
-  # A plain event writes several values as "ARRAY::a|:b", but a single
-  # value as it is; JSON sends both as arrays.
-  def test_array_headers_are_written_the_way_a_plain_event_writes_them
+  # A plain event writes these as "ARRAY::a|:b"; JSON sends them as arrays,
+  # even with a single value.
+  def test_array_headers_are_arrays
     content = Response.new("Content-Type: text/event-json", JSON_EVENT).content
 
-    assert_equal "ARRAY::<sip:+4511111111@a>|:<sip:+4522222222@b>", content[:variable_sip_i_p_asserted_identity]
-    assert_equal "<sip:+4533333333@c>", content[:variable_sip_h_diversion]
+    assert_equal ["<sip:+4511111111@a>", "<sip:+4522222222@b>"], content[:variable_sip_i_p_asserted_identity]
+    assert_equal ["<sip:+4533333333@c>"], content[:variable_sip_h_diversion]
   end
 
   def test_event_body_is_kept_as_it_is

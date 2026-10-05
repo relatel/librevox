@@ -238,10 +238,10 @@ FS → Listener:  command/reply +OK  → triggers session_initiated
 Librevox subscribes to events as JSON (`myevents json`, and `event json` on an
 inbound connection), which the json gem parses in C. A JSON event becomes the
 same hash a plain event would: header names are symbols
-(`:caller_caller_id_number`), the body is `:body`, and an array header is
-written as a plain event writes it (`"ARRAY::a|:b"`). JSON values are not
-URL-encoded, so they need no decoding. Two values differ from a plain event:
-an empty one is `""` rather than `"_undef_"`, and values are UTF-8 strings
+(`:caller_caller_id_number`) and the body is `:body`. JSON values are not
+URL-encoded, so they need no decoding. Three things differ from a plain event:
+an array header is an Array (`["a", "b"]`) rather than `"ARRAY::a|:b"`, an
+empty value is `""` rather than `"_undef_"`, and values are UTF-8 strings
 rather than binary ones.
 
 Plain events are still read: the outbound `connect` reply is always plain and
