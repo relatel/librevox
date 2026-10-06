@@ -17,6 +17,9 @@ class MockConnection
     nil
   end
 
+  def close_write
+  end
+
   def close
   end
 end
@@ -111,10 +114,31 @@ module EventTests
     assert_equal "got event: HOOK_WITH_ARG", @listener.read_data
   end
 
+  def test_event_without_hooks_adds_no_hook_entry
+    event "UNHOOKED_EVENT"
+
+    refute @class.hooks.key?(:unhooked_event)
+  end
+
   def test_calls_on_event_for_any_event
     event "THIRD_EVENT"
 
     assert_equal "from on_event: THIRD_EVENT", @listener.read_data
+  end
+
+  # A sendevent naming a live channel's Unique-ID is queued to that channel,
+  # which delivers it with the channel's data and no Event-Name.
+  def test_calls_on_event_for_an_event_without_a_name
+    body    = "Event-Subclass: some::thing"
+    headers = "Content-Type: text/event-plain\nContent-Length: #{body.size}"
+
+    _, warnings = capture_subprocess_io do
+      @listener.receive_message(Librevox::Protocol::Response.new(headers, body))
+      yield_to_fibers
+    end
+
+    assert_equal "from on_event: ", @listener.read_data
+    assert_empty warnings
   end
 
   def test_dispatches_on_event_and_hooks_for_channel_data

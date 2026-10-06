@@ -37,10 +37,9 @@ module Librevox
     #                 application: "execute_extension",
     #                 parameters: "dx XML features"
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bind_meta_app
-    def bind_meta_app(args = {})
-      arg_string =
-        args.values_at(:key, :listen_to, :respond_on, :application).join(" ")
-      arg_string += "::#{args[:parameters]}" if args[:parameters]
+    def bind_meta_app(key:, listen_to:, respond_on:, application:, parameters: nil)
+      arg_string = [key, listen_to, respond_on, application].join(" ")
+      arg_string += "::#{parameters}" if parameters
 
       application "bind_meta_app", arg_string
     end
@@ -60,21 +59,18 @@ module Librevox
     #   bridge ['user/coltrane', 'user/davis'], ['user/sun-ra', 'user/taylor']
     #   #=> user/coltrane,user/davis|user/sun-ra,user/taylor
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bridge
-    def bridge(*args)
-      variables = if args.last.is_a? Hash
-                    pairs = args.pop.map {|k,v| "#{k}=#{v}"}
-                    "{#{pairs.join(",")}}"
-                  else
-                    ""
-                  end
+    def bridge(*endpoints, **variables)
+      pairs = variables.map { |name, value| "#{name}=#{value}" }
+      prefix = pairs.empty? ? "" : "{#{pairs.join(",")}}"
 
-      endpoints = if args.first.is_a? Array
-                    args.map {|e| e.join(",")}.join("|")
-                  else
-                    args.join ","
-                  end
+      # Endpoints in a group are called at once; groups are tried in turn.
+      dial_string = if endpoints.first.is_a?(Array)
+                      endpoints.map { |group| group.join(",") }.join("|")
+                    else
+                      endpoints.join(",")
+                    end
 
-      application "bridge", variables + endpoints
+      application "bridge", prefix + dial_string
     end
 
     # Deflect a call by sending a REFER. Takes a SIP URI as argument, rerouting
@@ -102,8 +98,8 @@ module Librevox
     # @example Only export to B-leg
     #   export "some_var", local: false
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_export
-    def export(var, args = {})
-      nolocal = args[:local] == false ? "nolocal:" : ""
+    def export(var, local: true)
+      nolocal = local ? "" : "nolocal:"
 
       application "export", "#{nolocal}#{var}"
     end
@@ -138,19 +134,11 @@ module Librevox
     #     timeout: 5000,
     #     regexp: '\d+'
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_play_and_get_digits
-    def play_and_get_digits(file, invalid_file, args = {})
-      min         = args[:min]          || 1
-      max         = args[:max]          || 2
-      tries       = args[:tries]        || 3
-      terminators = args[:terminators]  || "#"
-      timeout     = args[:timeout]      || 5000
-      variable    = args[:variable]     || "read_digits_var"
-      regexp      = args[:regexp]       || "\\d+"
+    def play_and_get_digits(file, invalid_file, min: 1, max: 2, tries: 3, terminators: "#",
+                            timeout: 5000, variable: "read_digits_var", regexp: "\\d+")
+      args = [min, max, tries, timeout, terminators, file, invalid_file, variable, regexp].join(" ")
 
-      args = [min, max, tries, timeout, terminators, file, invalid_file,
-        variable, regexp].join " "
-
-      application "play_and_get_digits", args, variable: variable
+      application "play_and_get_digits", args, variable:
     end
 
     # Plays a sound file on the current channel.
@@ -170,17 +158,10 @@ module Librevox
     end
 
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_read
-    def read(file, args = {})
-      min         = args[:min]          || 1
-      max         = args[:max]          || 2
-      terminators = args[:terminators]  || "#"
-      timeout     = args[:timeout]      || 5000
-      variable    = args[:variable]     || "read_digits_var"
+    def read(file, min: 1, max: 2, terminators: "#", timeout: 5000, variable: "read_digits_var")
+      args = [min, max, file, variable, timeout, terminators].join(" ")
 
-      arg_string = "%s %s %s %s %s %s" % [min, max, file, variable, timeout,
-        terminators]
-
-      application "read", arg_string, variable: variable
+      application "read", args, variable:
     end
 
     # Records a message, with an optional limit on the maximum duration of the
@@ -190,9 +171,16 @@ module Librevox
     # @example With 20 second limit
     #   record "/path/to/new/file.wac", limit: 20
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_record
-    def record(path, params = {})
-      args = [path, params[:limit]].compact.join(" ")
-      application "record", args
+    def record(path, limit: nil)
+      application "record", [path, limit].compact.join(" ")
+    end
+
+    # Records the whole call to a file, in the background, until it ends.
+    # @example
+    #   record_session "/recordings/592567a2.wav"
+    # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_record_session
+    def record_session(path)
+      application "record_session", path
     end
 
     # Redirect a channel to another endpoint. You must take care to not
@@ -216,6 +204,14 @@ module Librevox
     # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_respond
     def respond(code)
       application "respond", code.to_s
+    end
+
+    # Sends DTMF digits to the other side of the call.
+    # @example
+    #   send_dtmf "1234#"
+    # @see http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_send_dtmf
+    def send_dtmf(digits)
+      application "send_dtmf", digits
     end
 
     # Sets a channel variable.

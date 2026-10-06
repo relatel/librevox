@@ -20,7 +20,7 @@ class TestListenerBase < Minitest::Test
       Sync do
         event "SOME_EVENT"
         assert_equal "api test", @listener.outgoing_data.shift
-        command_reply "Reply-Text" => "+OK"
+        api_response body: "+OK"
       end
     }.join(1)
 

@@ -37,6 +37,17 @@ class ProtocolConnectionTest < Minitest::Test
     assert_equal "HEARTBEAT", msg.content[:event_name]
   end
 
+  def test_receives_a_json_event
+    body = '{"Event-Name":"HEARTBEAT","Up-Time":"0 years, 1 day"}'
+    @write_io.write "Content-Length: #{body.bytesize}\nContent-Type: text/event-json\n\n#{body}"
+    @write_io.close
+
+    msg = @connection.receive_data
+    assert msg.event?
+    assert_equal "HEARTBEAT", msg.event
+    assert_equal "0 years, 1 day", msg.content[:up_time]
+  end
+
   def test_receives_multiple_messages
     @write_io.write "Content-Type: command/reply\n\n"
     @write_io.write "Content-Type: api/response\n\n"

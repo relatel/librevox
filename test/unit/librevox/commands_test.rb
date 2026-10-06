@@ -65,6 +65,55 @@ class TestCommands < Minitest::Test
     assert_equal "some_cause", cmd[:args]
   end
 
+  def test_hupall_matching_a_variable
+    cmd = C.hupall "NORMAL_CLEARING", "queue_owner", "1234-abcd"
+    assert_equal "hupall", cmd[:name]
+    assert_equal "NORMAL_CLEARING queue_owner 1234-abcd", cmd[:args]
+  end
+
+  def test_uuid_answer
+    cmd = C.uuid_answer "1234-abcd"
+    assert_equal "uuid_answer", cmd[:name]
+    assert_equal "1234-abcd", cmd[:args]
+  end
+
+  def test_uuid_break
+    assert_equal "1234-abcd", C.uuid_break("1234-abcd")[:args]
+    assert_equal "1234-abcd all", C.uuid_break("1234-abcd", all: true)[:args]
+  end
+
+  def test_uuid_transfer
+    cmd = C.uuid_transfer "1234-abcd", "9001", "XML", "default"
+    assert_equal "uuid_transfer", cmd[:name]
+    assert_equal "1234-abcd 9001 XML default", cmd[:args]
+
+    cmd = C.uuid_transfer "1234-abcd", "playback:hello.wav,park", "inline"
+    assert_equal "1234-abcd playback:hello.wav,park inline", cmd[:args]
+  end
+
+  def test_uuid_recv_dtmf
+    cmd = C.uuid_recv_dtmf "1234-abcd", "12"
+    assert_equal "uuid_recv_dtmf", cmd[:name]
+    assert_equal "1234-abcd 12", cmd[:args]
+  end
+
+  def test_uuid_setvar
+    cmd = C.uuid_setvar "1234-abcd", "hold_music", "local_stream://moh"
+    assert_equal "uuid_setvar", cmd[:name]
+    assert_equal "1234-abcd hold_music local_stream://moh", cmd[:args]
+  end
+
+  def test_uuid_setvar_multi
+    cmd = C.uuid_setvar_multi "1234-abcd", "call_timeout" => 30, "continue_on_fail" => true
+    assert_equal "uuid_setvar_multi", cmd[:name]
+    assert_equal "1234-abcd call_timeout=30;continue_on_fail=true", cmd[:args]
+  end
+
+  # FreeSWITCH splits the variables on ";".
+  def test_uuid_setvar_multi_refuses_a_value_with_a_semicolon
+    assert_raises(ArgumentError) { C.uuid_setvar_multi "1234-abcd", "a" => "1;2" }
+  end
+
   def test_hash_insert
     cmd = C.hash :insert, :firmafon, :foo, "some value or other"
     assert_equal "hash", cmd[:name]
@@ -93,5 +142,154 @@ class TestCommands < Minitest::Test
     cmd = C.uuid_bridge "1234-abcd", "9090-ffff"
     assert_equal "uuid_bridge", cmd[:name]
     assert_equal "1234-abcd 9090-ffff", cmd[:args]
+  end
+
+  def test_uuid_kill
+    cmd = C.uuid_kill "1234-abcd"
+    assert_equal "uuid_kill", cmd[:name]
+    assert_equal "1234-abcd", cmd[:args]
+
+    cmd = C.uuid_kill "1234-abcd", "NO_ROUTE_DESTINATION"
+    assert_equal "1234-abcd NO_ROUTE_DESTINATION", cmd[:args]
+  end
+
+  def test_sched_hangup
+    cmd = C.sched_hangup "+3600", "1234-abcd", "ALLOTTED_TIMEOUT"
+    assert_equal "sched_hangup", cmd[:name]
+    assert_equal "+3600 1234-abcd ALLOTTED_TIMEOUT", cmd[:args]
+  end
+
+  # sched_del reads its count from FreeSWITCH's reply.
+  module SchedDelReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :sent
+
+    def command(name, args = "")
+      self.sent = [name, args]
+      Librevox::Protocol::Response.new("Content-Type: api/response", "+OK Deleted: 1\n")
+    end
+  end
+
+  # global_getvar reads its value, or every value, from FreeSWITCH's reply.
+  module UuidExistsReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :output, :sent
+
+    def command(name, args = "")
+      self.sent = [name, args]
+      Librevox::Protocol::Response.new("Content-Type: api/response", output)
+    end
+  end
+
+  module UuidGetvarReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :output, :sent
+
+    def command(name, args = "")
+      self.sent = [name, args]
+      Librevox::Protocol::Response.new("Content-Type: api/response", output)
+    end
+  end
+
+  def test_uuid_getvar_reads_a_value
+    UuidGetvarReply.output = "local_stream://moh"
+    assert_equal "local_stream://moh", UuidGetvarReply.uuid_getvar("1234-abcd", "hold_music")
+    assert_equal ["uuid_getvar", "1234-abcd hold_music"], UuidGetvarReply.sent
+  end
+
+  # FreeSWITCH answers "_undef_" for a variable that isn't set.
+  def test_uuid_getvar_is_nil_when_unset
+    UuidGetvarReply.output = "_undef_"
+    assert_nil UuidGetvarReply.uuid_getvar("1234-abcd", "nope")
+  end
+
+  module GlobalGetvarReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :output
+
+    def command(_name, _args = "")
+      Librevox::Protocol::Response.new("Content-Type: api/response", output)
+    end
+  end
+
+  def test_global_getvar_reads_one
+    GlobalGetvarReply.output = "node-1\n"
+    assert_equal "node-1", GlobalGetvarReply.global_getvar("hostname")
+  end
+
+  # FreeSWITCH answers an api command with no output "-ERR no reply", as
+  # global_getvar of a variable that isn't set: no value, not a failure.
+  module UnsetGlobalReply
+    include Librevox::Commands
+
+    extend self
+
+    def command(_name, _args = "")
+      raise Librevox::ResponseError, "-ERR no reply"
+    end
+  end
+
+  def test_global_getvar_is_nil_when_unset
+    assert_nil UnsetGlobalReply.global_getvar("nope")
+  end
+
+  # CommandSocket returns a "-ERR" reply rather than raising it.
+  def test_global_getvar_is_nil_when_unset_on_a_command_socket
+    GlobalGetvarReply.output = "-ERR no reply\n"
+    assert_nil GlobalGetvarReply.global_getvar("nope")
+  end
+
+  module FailingGlobalReply
+    include Librevox::Commands
+
+    extend self
+
+    def command(_name, _args = "")
+      raise Librevox::ResponseError, "-ERR Permission denied"
+    end
+  end
+
+  def test_global_getvar_raises_other_errors
+    assert_raises(Librevox::ResponseError) { FailingGlobalReply.global_getvar("hostname") }
+  end
+
+  def test_global_getvar_reads_them_all
+    GlobalGetvarReply.output = "hostname=node-1\ndomain=a=b\n\n"
+    assert_equal({ "hostname" => "node-1", "domain" => "a=b" }, GlobalGetvarReply.global_getvar)
+  end
+
+  def test_uuid_exists_reads_true_and_false
+    UuidExistsReply.output = "true"
+    assert UuidExistsReply.uuid_exists("1234-abcd")
+    assert_equal ["uuid_exists", "1234-abcd"], UuidExistsReply.sent
+
+    UuidExistsReply.output = "false"
+    refute UuidExistsReply.uuid_exists("1234-abcd")
+  end
+
+  def test_sched_del_returns_how_many_tasks_it_deleted
+    assert_equal 1, SchedDelReply.sched_del("1234-abcd")
+    assert_equal ["sched_del", "1234-abcd"], SchedDelReply.sent
+  end
+
+  # Without arguments, hash is Ruby's Object#hash, so command sockets can be
+  # Hash keys and live in Sets without sending anything to FreeSWITCH.
+  def test_hash_without_arguments_is_object_hash
+    socket = Librevox::CommandSocket.new(connect: false)
+
+    assert_kind_of Integer, socket.hash
+    assert_includes Set[socket], socket
   end
 end

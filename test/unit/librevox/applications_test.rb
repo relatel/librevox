@@ -182,6 +182,18 @@ class TestApplications < Minitest::Test
     assert_equal "403", app[:args]
   end
 
+  def test_record_session
+    app = AppTest.record_session "/recordings/1234.wav"
+    assert_equal "record_session", app[:name]
+    assert_equal "/recordings/1234.wav", app[:args]
+  end
+
+  def test_send_dtmf
+    app = AppTest.send_dtmf "1234#"
+    assert_equal "send_dtmf", app[:name]
+    assert_equal "1234#", app[:args]
+  end
+
   def test_set
     app = AppTest.set("foo", "bar")
     assert_equal "set", app[:name]
@@ -210,5 +222,17 @@ class TestApplications < Minitest::Test
     app = AppTest.unset('foo')
     assert_equal "unset", app[:name]
     assert_equal "foo", app[:args]
+  end
+
+  def test_misspelled_option_raises
+    assert_raises(ArgumentError) do
+      AppTest.play_and_get_digits "please-enter", "wrong-try-again", tiemout: 100
+    end
+  end
+
+  def test_bind_meta_app_requires_key
+    assert_raises(ArgumentError) do
+      AppTest.bind_meta_app listen_to: :a, respond_on: :s, application: "hangup"
+    end
   end
 end
