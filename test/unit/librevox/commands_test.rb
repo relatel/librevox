@@ -229,6 +229,42 @@ class TestCommands < Minitest::Test
     assert_equal "node-1", GlobalGetvarReply.global_getvar("hostname")
   end
 
+  # FreeSWITCH answers an api command with no output "-ERR no reply", as
+  # global_getvar of a variable that isn't set: no value, not a failure.
+  module UnsetGlobalReply
+    include Librevox::Commands
+
+    extend self
+
+    def command(_name, _args = "")
+      raise Librevox::ResponseError, "-ERR no reply"
+    end
+  end
+
+  def test_global_getvar_is_nil_when_unset
+    assert_nil UnsetGlobalReply.global_getvar("nope")
+  end
+
+  # CommandSocket returns a "-ERR" reply rather than raising it.
+  def test_global_getvar_is_nil_when_unset_on_a_command_socket
+    GlobalGetvarReply.output = "-ERR no reply\n"
+    assert_nil GlobalGetvarReply.global_getvar("nope")
+  end
+
+  module FailingGlobalReply
+    include Librevox::Commands
+
+    extend self
+
+    def command(_name, _args = "")
+      raise Librevox::ResponseError, "-ERR Permission denied"
+    end
+  end
+
+  def test_global_getvar_raises_other_errors
+    assert_raises(Librevox::ResponseError) { FailingGlobalReply.global_getvar("hostname") }
+  end
+
   def test_global_getvar_reads_them_all
     GlobalGetvarReply.output = "hostname=node-1\ndomain=a=b\n\n"
     assert_equal({ "hostname" => "node-1", "domain" => "a=b" }, GlobalGetvarReply.global_getvar)

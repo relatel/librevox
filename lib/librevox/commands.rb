@@ -180,20 +180,29 @@ module Librevox
       command("sched_del", id).content[/\A\+OK Deleted: (\d+)/, 1].to_i
     end
 
-    # Read a global variable (vars.xml). With no name, read them all, as a
-    # Hash: FreeSWITCH lists them one name=value per line.
+    NO_REPLY = "-ERR no reply"
+
+    # Read a global variable (vars.xml), or nil when it isn't set: FreeSWITCH
+    # answers an api command with no output "-ERR no reply". With no name,
+    # read them all, as a Hash: FreeSWITCH lists them one name=value per
+    # line.
     # @example
     #   socket.global_getvar "hostname" # => "node-1"
     #   socket.global_getvar            # => { "hostname" => "node-1", … }
     # @see http://wiki.freeswitch.org/wiki/Mod_commands#global_getvar
     def global_getvar(name = nil)
       output = command("global_getvar", name).content
+      return if name && output.strip == NO_REPLY
       return output.strip if name
 
       output
         .lines(chomp: true)
         .reject(&:empty?)
         .to_h { |line| line.split("=", 2) }
+    rescue ResponseError => e
+      raise unless name && e.message == NO_REPLY
+
+      nil
     end
 
     # Bridge two call legs together. At least one leg must be answered.
