@@ -144,6 +144,10 @@ module Librevox
       end
 
       def invoke_event_hooks(resp)
+        # A sendevent queued to a live channel comes with no Event-Name, so
+        # no hook is for it.
+        return unless resp.event
+
         # fetch, not [], so looking up an event without hooks leaves the
         # class's hook table alone.
         self.class.hooks.fetch(resp.event.downcase.to_sym, []).each do |block|

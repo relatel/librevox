@@ -126,6 +126,21 @@ module EventTests
     assert_equal "from on_event: THIRD_EVENT", @listener.read_data
   end
 
+  # A sendevent naming a live channel's Unique-ID is queued to that channel,
+  # which delivers it with the channel's data and no Event-Name.
+  def test_calls_on_event_for_an_event_without_a_name
+    body    = "Event-Subclass: some::thing"
+    headers = "Content-Type: text/event-plain\nContent-Length: #{body.size}"
+
+    _, warnings = capture_subprocess_io do
+      @listener.receive_message(Librevox::Protocol::Response.new(headers, body))
+      yield_to_fibers
+    end
+
+    assert_equal "from on_event: ", @listener.read_data
+    assert_empty warnings
+  end
+
   def test_dispatches_on_event_and_hooks_for_channel_data
     @listener.hook_log.clear
 
