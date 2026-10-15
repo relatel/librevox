@@ -22,7 +22,7 @@ module Librevox
           barrier.stop
         end
       end
-    rescue Interrupt, SignalException
+    rescue SignalException # includes Interrupt
       Librevox.logger.info "Terminating Librevox"
     end
 

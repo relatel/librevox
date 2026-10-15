@@ -46,6 +46,27 @@ class TestCommandSocket < Minitest::Test
     thread.value
   end
 
+  def test_raises_when_connection_closes_before_reply
+    connect
+
+    thread = Thread.new { @socket.status }
+    thread.report_on_exception = false
+    assert_equal "api status", read_message
+    @fs.close
+
+    assert_raises(Librevox::ConnectionError) { thread.value }
+  end
+
+  # The README shows requiring command_socket on its own.
+  def test_can_be_required_on_its_own
+    lib = File.expand_path("../../../lib", __dir__)
+    script = 'require "librevox/command_socket"; print Librevox::CommandSocket'
+    output = IO.popen([RbConfig.ruby, "-I", lib, "-e", script], &:read)
+
+    assert $?.success?, "requiring librevox/command_socket failed"
+    assert_equal "Librevox::CommandSocket", output
+  end
+
   private
 
   def connect

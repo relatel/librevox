@@ -18,6 +18,7 @@ module Librevox
 
   module Protocol
     autoload :Connection, 'librevox/protocol/connection'
+    autoload :Message, 'librevox/protocol/message'
     autoload :Response, 'librevox/protocol/response'
   end
 

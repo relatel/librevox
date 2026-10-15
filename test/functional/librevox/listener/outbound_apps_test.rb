@@ -60,8 +60,9 @@ class TestOutboundSequentialApps < Minitest::Test
 
   def test_api_responses_do_not_advance_app
     assert_execute_app @listener, "foo", "1234"
+    command_reply "Reply-Text" => "+OK" # the sendmsg's own acknowledgement
 
-    api_response body: "Foo"
+    api_response body: "Foo" # unsolicited: no command waits for it, so it's dropped
 
     assert_send_nothing @listener
   end

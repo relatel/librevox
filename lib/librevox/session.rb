@@ -32,6 +32,9 @@ module Librevox
           @listener.receive_message(msg)
           break if @listener.session_complete?
         end
+      rescue IOError, Errno::ECONNRESET, Errno::EPIPE
+        # FreeSWITCH reset or closed the socket (e.g. on uuid_kill): the
+        # session is over, the same as reaching the end of the stream.
       ensure
         @listener.connection_closed
       end

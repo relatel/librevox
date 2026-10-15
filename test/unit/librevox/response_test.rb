@@ -45,6 +45,14 @@ class TestResponse < Minitest::Test
     refute response.api_response?
   end
 
+  # An API command's output is its body, verbatim: a value with a colon, like
+  # a URL, must not be parsed as a header line.
+  def test_api_response_content_is_the_raw_body
+    response = Librevox::Protocol::Response.new("Content-Type: api/response", "local_stream://latin")
+
+    assert_equal "local_stream://latin", response.content
+  end
+
   def test_check_for_command_reply
     response = Librevox::Protocol::Response.new("Content-Type: command/reply", "+OK")
     assert response.command_reply?
@@ -73,9 +81,23 @@ class TestResponse < Minitest::Test
     assert_equal "hello+world", response.content[:some_header]
   end
 
-  def test_url_decode_non_event_content
-    response = Librevox::Protocol::Response.new("Content-Type: command/reply", "Reply-Text: %2BOK")
-    assert_equal "+OK", response.content[:reply_text]
+  # FreeSWITCH encodes only the events it serializes; log lines are raw.
+  def test_does_not_url_decode_non_event_content
+    response = Librevox::Protocol::Response.new("Content-Type: log/data", "Log-Level: 7\n\nrate is 100%2B")
+    assert_equal "7", response.content[:log_level]
+    assert_equal "rate is 100%2B", response.content[:body]
+  end
+
+  def test_does_not_url_decode_a_reply_body
+    response = Librevox::Protocol::Response.new("Content-Type: command/reply", "Reply-Text: 100%2B")
+    assert_equal "100%2B", response.content[:reply_text]
+  end
+
+  # FreeSWITCH's reply to connect is the channel data, a serialized event.
+  def test_url_decodes_the_headers_of_a_reply_that_is_an_event
+    response = Librevox::Protocol::Response.new("Content-Type: command/reply\nEvent-Name: CHANNEL_DATA\nCaller-Caller-ID-Number: %2B4512345678", "")
+    assert_equal "+4512345678", response.headers[:caller_caller_id_number]
+    assert_equal "command/reply", response.headers[:content_type]
   end
 
   def test_does_not_url_decode_headers
@@ -106,5 +128,20 @@ class TestResponse < Minitest::Test
   def test_not_error_on_reply_without_reply_text
     response = Librevox::Protocol::Response.new("Content-Type: command/reply", "Foo: Bar")
     refute response.error?
+  end
+
+  def test_error_on_api_response_with_err_output
+    response = Librevox::Protocol::Response.new("Content-Type: api/response", "-ERR NO_ROUTE_DESTINATION\n")
+    assert response.error?
+  end
+
+  def test_not_error_on_api_response_with_ok_output
+    response = Librevox::Protocol::Response.new("Content-Type: api/response", "+OK 1234-abcd\n")
+    refute response.error?
+  end
+
+  def test_reply_text_is_an_api_commands_output
+    response = Librevox::Protocol::Response.new("Content-Type: api/response", "-ERR No such channel!\n")
+    assert_equal "-ERR No such channel!\n", response.reply_text
   end
 end

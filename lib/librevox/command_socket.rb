@@ -2,6 +2,7 @@
 
 require 'socket'
 require 'io/stream'
+require 'librevox'
 
 module Librevox
   class CommandSocket
@@ -32,22 +33,15 @@ module Librevox
     end
 
     def read_response
-      while msg = @connection.receive_data
-        return msg if msg.command_reply? || msg.api_response?
+      while (msg = @connection.receive_data)
+        return msg if msg.reply?
       end
+
+      raise ConnectionError, "Connection closed"
     end
 
     def application(app, uuid, args = nil, **params)
-      headers = {
-          event_lock:       true,
-          call_command:     "execute",
-          execute_app_name: app,
-          execute_app_arg:  args,
-        }
-        .merge(params)
-        .map { |key, value| "#{key.to_s.tr('_', '-')}: #{value}" }
-
-      send_message "sendmsg #{uuid}\n#{headers.join("\n")}"
+      send_message Protocol::Message.execute_app(uuid, app, args, **params)
     end
 
     def close
