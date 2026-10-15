@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'json'
+
 module Librevox
   # All commands should call `command` with the following parameters:
   #
@@ -141,6 +143,27 @@ module Librevox
       return if value == "_undef_"
 
       value
+    end
+
+    # Start or stop recording a channel, beside whatever it's doing: action
+    # is :start, :stop, :mask or :unmask; limit is in seconds. "all" stops
+    # every recording on it.
+    # @example
+    #   socket.uuid_record "592567a2-1be4-11df-a036-19bfdab2092f", :start, "/recordings/a.wav", limit: 3600
+    # @see https://developer.signalwire.com/freeswitch/FreeSWITCH-Explained/Modules/mod_commands_1966741/#uuid_record
+    def uuid_record(uuid, action, path, limit: nil)
+      command "uuid_record", [uuid, action, path, limit].compact.join(" ")
+    end
+
+    # The channel as FreeSWITCH writes it, as a Hash with its names as they
+    # are: the caller profile's fields ("Caller-Destination-Number") and its
+    # variables ("variable_destination_number").
+    # @example
+    #   socket.uuid_dump("592567a2-1be4-11df-a036-19bfdab2092f")["Caller-Destination-Number"] # => "1001"
+    # @see https://developer.signalwire.com/freeswitch/FreeSWITCH-Explained/Modules/mod_commands_1966741/#uuid_dump
+    def uuid_dump(uuid)
+      dump = command("uuid_dump", "#{uuid} json").content
+      JSON.parse(dump)
     end
 
     # Whether FreeSWITCH has a channel with this uuid. It answers "true" or

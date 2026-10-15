@@ -292,4 +292,43 @@ class TestCommands < Minitest::Test
     assert_kind_of Integer, socket.hash
     assert_includes Set[socket], socket
   end
+
+  def test_uuid_record_starts_a_recording
+    cmd = C.uuid_record "1234-abcd", :start, "/recordings/a.wav"
+    assert_equal ["uuid_record", "1234-abcd start /recordings/a.wav"], cmd.values_at(:name, :args)
+  end
+
+  def test_uuid_record_takes_a_limit_in_seconds
+    cmd = C.uuid_record "1234-abcd", :start, "/recordings/a.wav", limit: 3600
+    assert_equal "1234-abcd start /recordings/a.wav 3600", cmd[:args]
+  end
+
+  def test_uuid_record_stops_one
+    cmd = C.uuid_record "1234-abcd", :stop, "all"
+    assert_equal "1234-abcd stop all", cmd[:args]
+  end
+
+  module UuidDumpReply
+    include Librevox::Commands
+
+    extend self
+
+    attr_accessor :output, :sent
+
+    def command(name, args = "")
+      self.sent = [name, args]
+      Librevox::Protocol::Response.new("Content-Type: api/response", output)
+    end
+  end
+
+  # The channel as FreeSWITCH writes it, names as they are: its caller
+  # profile's fields and its variables (variable_…).
+  def test_uuid_dump_reads_the_channel
+    UuidDumpReply.output = '{"Caller-Destination-Number":"1001","variable_destination_number":"4522334455"}'
+    dump = UuidDumpReply.uuid_dump("1234-abcd")
+
+    assert_equal ["uuid_dump", "1234-abcd json"], UuidDumpReply.sent
+    assert_equal "1001", dump["Caller-Destination-Number"]
+    assert_equal "4522334455", dump["variable_destination_number"]
+  end
 end
